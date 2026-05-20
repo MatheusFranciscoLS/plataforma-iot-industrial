@@ -57,7 +57,7 @@ function App() {
         const dadosPassados = await resposta.json();
         let historicoAgrupado = [];
         
-        dadosPassados.forEach(dado => {
+dadosPassados.forEach(dado => {
           let index = historicoAgrupado.findIndex(item => item.timestamp === dado.timestamp);
           if (index >= 0) {
             historicoAgrupado[index][dado.idMaquina] = dado.temperaturaMotor;
@@ -69,7 +69,14 @@ function App() {
           }
         });
         
-        setHistorico(historicoAgrupado);
+        // --- A MÁGICA ACONTECE AQUI ---
+        // Ordena o array cronologicamente (do menor timestamp para o maior)
+        historicoAgrupado.sort((a, b) => a.timestamp - b.timestamp);
+        
+        // Pega apenas os últimos 20 registros para o gráfico não ficar esmagado
+        const ultimosRegistros = historicoAgrupado.slice(-20);
+        
+        setHistorico(ultimosRegistros);
       } catch (error) {
         console.error("Erro ao carregar o passado:", error);
       }
