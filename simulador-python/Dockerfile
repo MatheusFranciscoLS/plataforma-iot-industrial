@@ -1,14 +1,6 @@
-# Usa uma versão leve do Python
-FROM python:3.11-alpine
-
-# Pasta de trabalho
+FROM python:3.9-slim
 WORKDIR /usr/src/app
-
-# Instala a biblioteca requests (que o nosso script usa)
-RUN pip install requests
-
-# Copia o nosso simulador para dentro do container
-COPY simulador.py .
-
-# O comando para rodar o simulador
-CMD ["python", "-u", "simulador.py"]
+COPY . .
+# A linha abaixo é a que importa, garantindo que requests e pika sejam instalados
+RUN pip install requests pika
+CMD ["python", "simulador.py"]
