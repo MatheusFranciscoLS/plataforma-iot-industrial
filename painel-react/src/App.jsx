@@ -241,20 +241,34 @@ const formatarHora = (timestamp) => {
         <div className="bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-xl">
           <h3 className="text-lg font-bold mb-6 text-slate-200">Histórico de Temperatura da Frota</h3>
           <div className="w-full h-[400px]">
-            <ResponsiveContainer>
+<ResponsiveContainer>
               <LineChart data={historico} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
-                <XAxis dataKey="timestamp" tickFormatter={formatarHora} stroke="#64748b" tick={{ fill: '#64748b' }} tickMargin={10} />
+                
+                {/* 1. MUDANÇA AQUI: Avisamos que o eixo X é numérico e definimos o domínio */}
+                <XAxis 
+                  dataKey="timestamp" 
+                  type="number" 
+                  domain={['dataMin', 'dataMax']} 
+                  tickFormatter={formatarHora} 
+                  stroke="#64748b" 
+                  tick={{ fill: '#64748b' }} 
+                  tickMargin={10} 
+                />
+                
                 <YAxis domain={['dataMin - 5', 'dataMax + 5']} stroke="#64748b" tick={{ fill: '#64748b' }} />
+                
                 <Tooltip 
                   labelFormatter={formatarHora} 
                   contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #334155', borderRadius: '0.5rem', color: '#f8fafc' }} 
                   itemStyle={{ color: '#e2e8f0' }}
                 />
                 <Legend wrapperStyle={{ paddingTop: '20px' }} />
-                <Line type="monotone" dataKey="MAQ-01" stroke="#22d3ee" strokeWidth={3} dot={false} activeDot={{ r: 6, fill: '#22d3ee' }} isAnimationActive={false} />
-                <Line type="monotone" dataKey="MAQ-02" stroke="#f43f5e" strokeWidth={3} dot={false} activeDot={{ r: 6, fill: '#f43f5e' }} isAnimationActive={false} />
-                <Line type="monotone" dataKey="MAQ-03" stroke="#10b981" strokeWidth={3} dot={false} activeDot={{ r: 6, fill: '#10b981' }} isAnimationActive={false} />
+                
+                {/* 2. MUDANÇA AQUI: Adicionamos connectNulls={true} para a linha nunca quebrar */}
+                <Line connectNulls={true} type="monotone" dataKey="MAQ-01" stroke="#22d3ee" strokeWidth={3} dot={false} activeDot={{ r: 6, fill: '#22d3ee' }} isAnimationActive={false} />
+                <Line connectNulls={true} type="monotone" dataKey="MAQ-02" stroke="#f43f5e" strokeWidth={3} dot={false} activeDot={{ r: 6, fill: '#f43f5e' }} isAnimationActive={false} />
+                <Line connectNulls={true} type="monotone" dataKey="MAQ-03" stroke="#10b981" strokeWidth={3} dot={false} activeDot={{ r: 6, fill: '#10b981' }} isAnimationActive={false} />
               </LineChart>
             </ResponsiveContainer>
           </div>
