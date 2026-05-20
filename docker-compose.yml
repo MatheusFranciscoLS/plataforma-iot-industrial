@@ -1,0 +1,48 @@
+services:
+  # 1. O Banco de Dados
+  postgres-db:
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_USER=admin_iot
+      - POSTGRES_PASSWORD=senha_nova_123
+      - POSTGRES_DB=iot_plataforma
+
+  # --- NOVO: O nosso Correio Central (RabbitMQ) ---
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    ports:
+      - "5672:5672"   # Porta interna por onde os sistemas conversam
+      - "15672:15672" # Painel visual para você acessar no navegador
+  # ------------------------------------------------
+
+  # 2. O Coração Java (API)
+  iot-core:
+    build: ./iot-core
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres-db
+      - rabbitmq # NOVO: O Java espera o correio abrir
+    restart: always
+
+# 3. O Mensageiro Node (Gateway)
+  servidor-node:
+    build: ./servidor-node
+    ports:
+      - "3000:3000"
+    environment:
+      - JWT_SECRET=MinhaChaveSuperSecretaParaAIndustriaIot2026!
+    depends_on:
+      - rabbitmq
+
+  # 4. O Simulador Python
+  simulador-python:
+    build: ./simulador-python
+    depends_on:
+      - iot-core
+
+  # 5. A Interface React
+  painel-react:
+    build: ./painel-react
+    ports:
+      - "5173:5173"

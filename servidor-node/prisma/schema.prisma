@@ -1,0 +1,18 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+// Esta é a nossa tabela no banco de dados
+model RegistroSensor {
+  id                Int      @id @default(autoincrement())
+  id_maquina        String
+  timestamp         Int
+  temperatura_motor Float
+  vibracao          Float
+  rpm               Int
+  data_recebimento  DateTime @default(now()) // Salva a hora exata que o Node recebeu
+}
