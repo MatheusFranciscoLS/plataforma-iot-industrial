@@ -14,7 +14,7 @@ conexao = pika.BlockingConnection(parametros)
 canal = conexao.channel()
 
 NODE_HOST = os.getenv("NODE_HOST", "localhost")
-URL_SERVIDOR = "http://iot-core:8080/api/sensores"
+URL_SERVIDOR = os.getenv("JAVA_URL", "http://localhost:8080/api/sensores")
 
 
 def gerar_dados(id_maquina):
