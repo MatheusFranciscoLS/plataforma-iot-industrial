@@ -45,7 +45,9 @@ io.use((socket, next) => {
 async function conectarRabbitMQ() {
     try {
         // Conecta no RabbitMQ pelo nome do container
-        const connection = await amqp.connect('amqp://guest:guest@rabbitmq:5672');
+        // O Node vai tentar usar a URL da Nuvem. Se não achar, usa o localhost.
+const RABBITMQ_URL = process.env.RABBITMQ_URL || 'amqp://localhost';
+const connection = await amqp.connect(RABBITMQ_URL);
         const channel = await connection.createChannel();
         await channel.assertQueue('sensores.fila', { durable: true });
 

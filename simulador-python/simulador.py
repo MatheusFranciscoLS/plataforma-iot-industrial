@@ -2,6 +2,16 @@ import time
 import random
 import requests
 import os
+import pika
+import json
+
+# Tenta pegar a URL da nuvem. Se não existir, usa o localhost
+RABBITMQ_URL = os.getenv("RABBITMQ_URL", "amqp://localhost")
+
+# Configura os parâmetros de conexão usando a URL
+parametros = pika.URLParameters(RABBITMQ_URL)
+conexao = pika.BlockingConnection(parametros)
+canal = conexao.channel()
 
 NODE_HOST = os.getenv("NODE_HOST", "localhost")
 URL_SERVIDOR = "http://iot-core:8080/api/sensores"
