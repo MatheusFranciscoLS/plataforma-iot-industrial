@@ -110,8 +110,8 @@ function App() {
     return () => socket.disconnect();
   }, [token]);
 
-  const formatarHora = (timestamp) => {
-    return new Date(timestamp).toLocaleTimeString('pt-BR');
+const formatarHora = (timestamp) => {
+    return new Date(timestamp * 1000).toLocaleTimeString('pt-BR');
   };
 
   // --- TELA DE LOGIN ---
