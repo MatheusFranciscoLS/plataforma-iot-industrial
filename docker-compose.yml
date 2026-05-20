@@ -35,11 +35,12 @@ services:
     depends_on:
       - rabbitmq
 
-  # 4. O Simulador Python
+# 4. O Simulador Python
   simulador-python:
     build: ./simulador-python
-    depends_on:
-      - iot-core
+    environment:
+      - RABBITMQ_URL=amqps://bdxeeslm:kVgRW8QfT_3HpBR9JqHLXJ3XXIOhn8hp@seal.lmq.cloudamqp.com/bdxeeslm
+      - JAVA_URL=https://iot-core-api.onrender.com/api/sensores
 
   # 5. A Interface React
   painel-react:
