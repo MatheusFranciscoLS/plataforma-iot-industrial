@@ -89,7 +89,7 @@ dadosPassados.forEach(dado => {
         auth: { token: token }
     });
 
-    socket.on('novoRegistro', (dado) => {
+socket.on('novoRegistro', (dado) => {
       setStatusAtual((estadoAnterior) => ({
         ...estadoAnterior,
         [dado.idMaquina]: dado
@@ -97,19 +97,26 @@ dadosPassados.forEach(dado => {
 
       setHistorico((estadoAnterior) => {
         let novosDados = [...estadoAnterior];
-        let index = novosDados.findIndex(item => item.timestamp === dado.timestamp);
-
-        if (index >= 0) {
-          novosDados[index] = {
-            ...novosDados[index],
-            [dado.idMaquina]: dado.temperaturaMotor
-          };
+        // SOLUÇÃO: Arredondar o tempo para evitar dessincronização de milissegundos
+        // Pega o tempo do último registro inserido no gráfico
+        const ultimoRegistro = novosDados[novosDados.length - 1];
+        
+        // Se o último registro existe e a diferença de tempo for menor que 2 segundos (2000ms),
+        // consideramos que é o mesmo lote de envio do Python e agrupamos no mesmo ponto.
+        if (ultimoRegistro && Math.abs(ultimoRegistro.timestamp - dado.timestamp) < 2) {
+             let index = novosDados.length - 1;
+             novosDados[index] = {
+               ...novosDados[index],
+               [dado.idMaquina]: dado.temperaturaMotor
+             };
         } else {
-          novosDados.push({
-            timestamp: dado.timestamp,
-            [dado.idMaquina]: dado.temperaturaMotor
-          });
+             // Caso contrário, cria um novo ponto no tempo
+             novosDados.push({
+               timestamp: dado.timestamp,
+               [dado.idMaquina]: dado.temperaturaMotor
+             });
         }
+        
         return novosDados.length > 20 ? novosDados.slice(1) : novosDados;
       });
     });
