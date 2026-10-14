@@ -15,6 +15,16 @@ Uma arquitetura de microsserviços ponta a ponta para monitoramento em tempo rea
 
 ---
 
+# 📸 Painel em funcionamento
+
+<p align="center">
+  <img src="docs/painel.webp" alt="Painel de monitoramento com temperatura, RPM e vibração de três máquinas e o histórico de temperatura da frota" width="100%">
+</p>
+
+A máquina em estado crítico (MAQ-01) é destacada em vermelho; o gráfico mostra o histórico de temperatura da frota.
+
+---
+
 # ✨ Funcionalidades Principais
 
 - **Streaming em Tempo Real:** Visualização instantânea da telemetria das máquinas via WebSockets, com atraso inferior a 1 segundo.
