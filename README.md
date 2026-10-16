@@ -131,7 +131,7 @@ Senha: senha123
 
 # ✅ Testes Automatizados
 
-A API Java (`iot-core`, 35 testes), o gateway Node (`servidor-node`, 12 testes) e o simulador Python (`simulador-python`, 6 testes) têm testes automatizados, que rodam a cada push na `main` e a cada pull request no GitHub Actions (o selo no topo mostra o resultado).
+A API Java (`iot-core`, 56 testes), o gateway Node (`servidor-node`, 12 testes) e o simulador Python (`simulador-python`, 6 testes) têm testes automatizados, que rodam a cada push na `main` e a cada pull request no GitHub Actions (o selo no topo mostra o resultado).
 
 O que os testes do gateway Node cobrem: porteiro de tokens (válido, ausente, outra chave, vencido, sem assinatura), mensagens estragadas da fila, reconexão com espera crescente e a lista de origens do CORS. Os do simulador cobrem os campos e as faixas das leituras e o envio (cabeçalho de chave e tempo limite).
 
@@ -168,6 +168,10 @@ cd simulador-python && pip install -r requirements.txt && python -m unittest -v
 - **Um único segredo para o JWT nos dois serviços.** O Spring Boot emite o token e o Node valida a assinatura com a mesma chave, sem precisar chamar a API Java a cada conexão WebSocket.
 - **Sensores enviam sem login.** `POST /api/sensores` é aberto para que o simulador (e, em um caso real, os equipamentos) não precisem de token. Já a leitura do histórico exige token. Quem quiser fechar essa porta define `SENSOR_API_KEY` na API e no simulador: a API passa a exigir o cabeçalho `X-API-Key`.
 - **O sensor não escolhe o `id`.** A API recebe a leitura em um objeto próprio (`LeituraRequest`), valida os campos (nome da máquina, timestamp, temperatura, vibração e rotação) e sempre cria um registro novo. Antes, a entidade do banco era recebida direto, e um `POST` com o `id` de um registro existente o sobrescrevia (há um teste para isso).
+- **Usuários no banco, senha em BCrypt.** O login deixou de comparar com um texto fixo no código: os usuários ficam na tabela `usuario`, só com o hash da senha. Na primeira subida com o banco vazio a API cria o usuário de demonstração (`admin`); em produção, `ADMIN_USUARIO` e `ADMIN_SENHA` trocam esse acesso. Usuário inexistente gasta o mesmo tempo de um usuário real, para o tempo de resposta não revelar quem existe.
+- **Limite de tentativas no login.** Depois de 5 falhas seguidas do mesmo endereço para o mesmo usuário, o login responde 429 por 5 minutos (`LOGIN_MAX_TENTATIVAS` e `LOGIN_JANELA_SEGUNDOS` mudam isso). A contagem fica na memória, então reiniciar a API zera. Atrás da hospedagem o endereço vem do cabeçalho `X-Forwarded-For`.
+- **Histórico com filtro.** `GET /api/sensores` sem parâmetros continua devolvendo os 60 mais recentes; `?maquina=MAQ-01&limite=100` filtra uma máquina e escolhe o tamanho (de 1 a 500).
+- **Rota de saúde.** `GET /actuator/health` fica aberta e só diz se a API e o banco estão no ar; o RabbitMQ fora do ar não derruba a saúde, porque a API salva as leituras mesmo assim.
 - **Mensagem estragada não trava a fila.** O gateway Node descarta (sem devolver à fila) a mensagem que não for um JSON com `idMaquina`, e reconecta no RabbitMQ sozinho, esperando 1 s, 2 s, 4 s... até 30 s.
 - **Testes sem serviços externos.** Os testes usam banco H2 em memória e um RabbitMQ simulado, então rodam em qualquer máquina e no CI sem Docker.
 
@@ -180,10 +184,10 @@ cd simulador-python && pip install -r requirements.txt && python -m unittest -v
 
 ## Limitações conhecidas e próximos passos
 
-- Existe um único usuário fixo no código (`admin`); o próximo passo natural é ter usuários no banco com senha criptografada.
+- Não há tela nem rota para criar usuários: o usuário de demonstração é criado na subida e outros precisam ser inseridos no banco.
 - O CORS aceita qualquer origem (`*`) por padrão; em produção, defina `CORS_ORIGINS` na API Java e `CORS_ORIGIN` no gateway com o endereço do painel.
 - `POST /api/sensores` não exige autenticação por padrão (veja `SENSOR_API_KEY` acima).
-- Não há limite de tentativas no login.
+- O limite de tentativas do login é por instância da API e fica na memória; com mais de uma instância, cada uma conta por conta própria.
 - O painel React ainda não tem testes automatizados.
 - O `docker-compose.yml` foi ajustado (endereços entre serviços, healthchecks e volume do banco) sem poder ser testado com Docker neste ambiente.
 

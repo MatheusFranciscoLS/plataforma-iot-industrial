@@ -10,12 +10,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.nio.charset.StandardCharsets;
@@ -27,6 +30,8 @@ import java.util.List;
 public class RegistroSensorController {
 
     private static final Logger log = LoggerFactory.getLogger(RegistroSensorController.class);
+    private static final int PADRAO_HISTORICO = 60;
+    private static final int MAXIMO_HISTORICO = 500;
 
     private final RegistroSensorRepository repository;
     private final RabbitTemplate rabbitTemplate;
@@ -76,9 +81,26 @@ public class RegistroSensorController {
         return ResponseEntity.ok(salvo);
     }
 
+    /**
+     * Histórico, do mais novo para o mais antigo. Sem parâmetros, devolve os 60 mais recentes de todas as máquinas
+     * (como o painel sempre usou). `maquina` filtra uma máquina e `limite` escolhe o tamanho (de 1 a 500).
+     */
     @GetMapping
-    public ResponseEntity<List<RegistroSensor>> listarHistorico() {
-        return ResponseEntity.ok(repository.findTop60ByOrderByTimestampDesc());
+    public ResponseEntity<List<RegistroSensor>> listarHistorico(
+            @RequestParam(required = false) String maquina,
+            @RequestParam(required = false) Integer limite) {
+
+        if (maquina == null && limite == null) {
+            return ResponseEntity.ok(repository.findTop60ByOrderByTimestampDesc());
+        }
+
+        int tamanho = Math.min(Math.max(limite == null ? PADRAO_HISTORICO : limite, 1), MAXIMO_HISTORICO);
+        Pageable pagina = PageRequest.of(0, tamanho);
+
+        List<RegistroSensor> registros = (maquina == null || maquina.isBlank())
+                ? repository.findAllByOrderByTimestampDesc(pagina)
+                : repository.findByIdMaquinaOrderByTimestampDesc(maquina, pagina);
+        return ResponseEntity.ok(registros);
     }
 
     private boolean chaveConfere(String recebida) {
