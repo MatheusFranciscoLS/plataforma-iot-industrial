@@ -17,6 +17,9 @@ public interface RegistroSensorRepository extends JpaRepository<RegistroSensor, 
     // Os mais recentes, com o tamanho escolhido por quem chama (Pageable).
     List<RegistroSensor> findAllByOrderByTimestampDesc(Pageable pagina);
 
+    // Apaga as leituras anteriores ao timestamp (em segundos) e devolve quantas foram apagadas.
+    long deleteByTimestampLessThan(Long timestamp);
+
     // Os mais recentes de uma máquina só.
     List<RegistroSensor> findByIdMaquinaOrderByTimestampDesc(String idMaquina, Pageable pagina);
 }

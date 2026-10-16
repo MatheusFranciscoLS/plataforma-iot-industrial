@@ -1,14 +1,10 @@
 package com.industria.iot_core.controller;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.industria.iot_core.config.RabbitConfig;
 import com.industria.iot_core.dto.LeituraRequest;
 import com.industria.iot_core.model.RegistroSensor;
 import com.industria.iot_core.repository.RegistroSensorRepository;
+import com.industria.iot_core.service.RegistroSensorService;
 import jakarta.validation.Valid;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -29,25 +25,21 @@ import java.util.List;
 @RequestMapping("/api/sensores")
 public class RegistroSensorController {
 
-    private static final Logger log = LoggerFactory.getLogger(RegistroSensorController.class);
     private static final int PADRAO_HISTORICO = 60;
     private static final int MAXIMO_HISTORICO = 500;
 
     private final RegistroSensorRepository repository;
-    private final RabbitTemplate rabbitTemplate;
-    private final ObjectMapper objectMapper;
+    private final RegistroSensorService service;
 
     // Se SENSOR_API_KEY estiver definida, os sensores precisam mandá-la no cabeçalho X-API-Key.
     // Sem ela, a entrada de dados continua aberta, como antes.
     private final String chaveSensores;
 
     public RegistroSensorController(RegistroSensorRepository repository,
-                                    RabbitTemplate rabbitTemplate,
-                                    ObjectMapper objectMapper,
+                                    RegistroSensorService service,
                                     @Value("${api.sensor.key:}") String chaveSensores) {
         this.repository = repository;
-        this.rabbitTemplate = rabbitTemplate;
-        this.objectMapper = objectMapper;
+        this.service = service;
         this.chaveSensores = chaveSensores;
     }
 
@@ -59,26 +51,7 @@ public class RegistroSensorController {
         if (!chaveSensores.isBlank() && !chaveConfere(chave)) {
             return ResponseEntity.status(401).build();
         }
-
-        // Sempre cria um registro novo: o id e a data de recebimento são do servidor, nunca do sensor.
-        RegistroSensor novo = new RegistroSensor();
-        novo.setIdMaquina(leitura.idMaquina());
-        novo.setTimestamp(leitura.timestamp());
-        novo.setTemperaturaMotor(leitura.temperaturaMotor());
-        novo.setVibracao(leitura.vibracao());
-        novo.setRpm(leitura.rpm());
-
-        RegistroSensor salvo = repository.save(novo);
-        log.info("Leitura salva: {} | {} °C", salvo.getIdMaquina(), salvo.getTemperaturaMotor());
-
-        // Só depois de salvar avisa a fila. Se a fila falhar, a leitura continua salva.
-        try {
-            rabbitTemplate.convertAndSend(RabbitConfig.FILA_SENSORES, objectMapper.writeValueAsString(salvo));
-        } catch (Exception e) {
-            log.warn("Não foi possível enviar a leitura {} para o RabbitMQ: {}", salvo.getId(), e.getMessage());
-        }
-
-        return ResponseEntity.ok(salvo);
+        return ResponseEntity.ok(service.registrar(leitura));
     }
 
     /**

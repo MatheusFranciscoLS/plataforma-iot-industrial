@@ -172,6 +172,7 @@ cd simulador-python && pip install -r requirements.txt && python -m unittest -v
 - **Limite de tentativas no login.** Depois de 5 falhas seguidas do mesmo endereço para o mesmo usuário, o login responde 429 por 5 minutos (`LOGIN_MAX_TENTATIVAS` e `LOGIN_JANELA_SEGUNDOS` mudam isso). A contagem fica na memória, então reiniciar a API zera. Atrás da hospedagem o endereço vem do cabeçalho `X-Forwarded-For`.
 - **Histórico com filtro.** `GET /api/sensores` sem parâmetros continua devolvendo os 60 mais recentes; `?maquina=MAQ-01&limite=100` filtra uma máquina e escolhe o tamanho (de 1 a 500).
 - **Rota de saúde.** `GET /actuator/health` fica aberta e só diz se a API e o banco estão no ar; o RabbitMQ fora do ar não derruba a saúde, porque a API salva as leituras mesmo assim.
+- **Modo demonstração.** Com `SIMULADOR_ATIVO=true`, a própria API gera leituras de teste das três máquinas (mesmas faixas do simulador Python), para o painel publicado funcionar sem um simulador rodando em outro lugar. Com `RETENCAO_HORAS=24`, as leituras com mais de 24 horas são apagadas a cada 10 minutos, para o banco gratuito não encher. As duas variáveis vêm desligadas por padrão.
 - **Mensagem estragada não trava a fila.** O gateway Node descarta (sem devolver à fila) a mensagem que não for um JSON com `idMaquina`, e reconecta no RabbitMQ sozinho, esperando 1 s, 2 s, 4 s... até 30 s.
 - **Testes sem serviços externos.** Os testes usam banco H2 em memória e um RabbitMQ simulado, então rodam em qualquer máquina e no CI sem Docker.
 
