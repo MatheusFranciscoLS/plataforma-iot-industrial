@@ -31,3 +31,51 @@ jobs:
         run: |
           chmod +x mvnw
           ./mvnw -B verify
+
+  testes-gateway-node:
+    name: Testes do gateway Node
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: servidor-node
+
+    steps:
+      - name: Baixar o código
+        uses: actions/checkout@v4
+
+      - name: Instalar o Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: servidor-node/package-lock.json
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Rodar os testes
+        run: npm test
+
+  testes-simulador-python:
+    name: Testes do simulador Python
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: simulador-python
+
+    steps:
+      - name: Baixar o código
+        uses: actions/checkout@v4
+
+      - name: Instalar o Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: simulador-python/requirements.txt
+
+      - name: Instalar dependências
+        run: pip install -r requirements.txt
+
+      - name: Rodar os testes
+        run: python -m unittest -v

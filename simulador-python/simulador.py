@@ -1,24 +1,20 @@
-import time
-import random
-import requests
 import os
-import pika
-import json
+import random
+import time
 
-# Tenta pegar a URL da nuvem. Se não existir, usa o localhost
-RABBITMQ_URL = os.getenv("RABBITMQ_URL", "amqp://localhost")
+import requests
 
-# Configura os parâmetros de conexão usando a URL
-parametros = pika.URLParameters(RABBITMQ_URL)
-conexao = pika.BlockingConnection(parametros)
-canal = conexao.channel()
-
-NODE_HOST = os.getenv("NODE_HOST", "localhost")
+# Configuração por variáveis de ambiente (os padrões servem para rodar tudo na própria máquina)
 URL_SERVIDOR = os.getenv("JAVA_URL", "http://localhost:8080/api/sensores")
+CHAVE_API = os.getenv("SENSOR_API_KEY", "")  # só é preciso se a API Java exigir a chave
+INTERVALO_S = float(os.getenv("INTERVALO_S", "2"))
+TIMEOUT_S = 5  # sem isso, uma API travada deixaria o simulador esperando para sempre
+
+MAQUINAS = ["MAQ-01", "MAQ-02", "MAQ-03"]
 
 
 def gerar_dados(id_maquina):
-    # ATENÇÃO: As chaves do JSON agora estão idênticas aos atributos da classe Java (camelCase)
+    # As chaves do JSON são iguais aos atributos da classe Java (camelCase)
     return {
         "idMaquina": id_maquina,
         "timestamp": int(time.time()),
@@ -28,23 +24,27 @@ def gerar_dados(id_maquina):
     }
 
 
-def main():
-    print("Iniciando simulador...")
-    maquinas = ["MAQ-01", "MAQ-02", "MAQ-03"]
+def montar_cabecalhos(chave):
+    return {"X-API-Key": chave} if chave else {}
 
-    while True:
-        for maq in maquinas:
-            dados = gerar_dados(maq)
-            try:
-                # CORREÇÃO DA URL AQUI
-                resposta = requests.post(URL_SERVIDOR, json=dados)
-                print(f"[{maq}] Enviado para o JAVA - Status: {resposta.status_code}")
-            except Exception as e:
-                # Aproveitei para mandar o Python imprimir o erro real se der problema
-                print(
-                    f"[{maq}] Falha na conexão. O Java está rodando na 8080? Erro interno: {e}"
-                )
-        time.sleep(2)
+
+def enviar(sessao, dados, url=URL_SERVIDOR, chave=CHAVE_API):
+    """Envia uma leitura para a API Java e devolve a resposta HTTP."""
+    return sessao.post(url, json=dados, headers=montar_cabecalhos(chave), timeout=TIMEOUT_S)
+
+
+def main():
+    print(f"Iniciando simulador. Enviando para {URL_SERVIDOR} a cada {INTERVALO_S} s.")
+
+    with requests.Session() as sessao:
+        while True:
+            for maq in MAQUINAS:
+                try:
+                    resposta = enviar(sessao, gerar_dados(maq))
+                    print(f"[{maq}] Enviado para o Java - Status: {resposta.status_code}")
+                except requests.RequestException as erro:
+                    print(f"[{maq}] Falha ao enviar. A API Java está no ar em {URL_SERVIDOR}? Erro: {erro}")
+            time.sleep(INTERVALO_S)
 
 
 if __name__ == "__main__":

@@ -64,7 +64,7 @@ graph TD
 | API Core & Auth | Java 21 | Spring Boot, Spring Security, io.jsonwebtoken |
 | Mensageria | RabbitMQ | Protocolo AMQP, RabbitMQ Management |
 | Banco de Dados | PostgreSQL | JPA/Hibernate via Spring |
-| Simulador IoT | Python 3 | Pika, Time, Random |
+| Simulador IoT | Python 3 | Requests |
 | Infraestrutura | Docker | Docker Compose, Multi-container network |
 
 ---
@@ -131,7 +131,9 @@ Senha: senha123
 
 # ✅ Testes Automatizados
 
-A API Java (`iot-core`) tem **23 testes automatizados**, que rodam a cada push na `main` e a cada pull request no GitHub Actions (o selo no topo mostra o resultado).
+A API Java (`iot-core`, 35 testes), o gateway Node (`servidor-node`, 12 testes) e o simulador Python (`simulador-python`, 6 testes) têm testes automatizados, que rodam a cada push na `main` e a cada pull request no GitHub Actions (o selo no topo mostra o resultado).
+
+O que os testes do gateway Node cobrem: porteiro de tokens (válido, ausente, outra chave, vencido, sem assinatura), mensagens estragadas da fila, reconexão com espera crescente e a lista de origens do CORS. Os do simulador cobrem os campos e as faixas das leituras e o envio (cabeçalho de chave e tempo limite).
 
 | O que é testado | Como |
 |---|---|
@@ -142,11 +144,17 @@ A API Java (`iot-core`) tem **23 testes automatizados**, que rodam a cada push n
 | Entrada de dados: `POST /api/sensores` salva a leitura, envia para a fila `sensores.fila` e continua respondendo 200 mesmo se o RabbitMQ falhar | Aplicação completa, RabbitMQ simulado |
 | Histórico: no máximo 60 registros, do mais novo para o mais antigo; data de recebimento preenchida ao salvar | Teste de repositório (JPA + H2) |
 
-Para rodar na sua máquina (precisa de Java 21):
+Para rodar na sua máquina:
 
 ```bash
-cd iot-core
-./mvnw test
+# API Java (precisa de Java 21)
+cd iot-core && ./mvnw test
+
+# Gateway Node
+cd servidor-node && npm ci && npm test
+
+# Simulador Python
+cd simulador-python && pip install -r requirements.txt && python -m unittest -v
 ```
 
 ---
@@ -158,7 +166,9 @@ cd iot-core
 - **Salvar primeiro, avisar depois.** A API grava a leitura no banco e só então publica na fila do RabbitMQ, com o erro da fila tratado à parte. O teste `seOBrokerFalharALeituraContinuaSalvaEARespostaEhOk` garante que, com a fila falhando, a leitura continua salva e a resposta é 200.
 - **Fila entre a API e o painel.** O gateway Node consome a fila `sensores.fila` e entrega cada leitura por WebSocket (evento `novoRegistro`); o histórico do gráfico vem da API REST.
 - **Um único segredo para o JWT nos dois serviços.** O Spring Boot emite o token e o Node valida a assinatura com a mesma chave, sem precisar chamar a API Java a cada conexão WebSocket.
-- **Sensores enviam sem login.** `POST /api/sensores` é aberto para que o simulador (e, em um caso real, os equipamentos) não precisem de token. Já a leitura do histórico exige token.
+- **Sensores enviam sem login.** `POST /api/sensores` é aberto para que o simulador (e, em um caso real, os equipamentos) não precisem de token. Já a leitura do histórico exige token. Quem quiser fechar essa porta define `SENSOR_API_KEY` na API e no simulador: a API passa a exigir o cabeçalho `X-API-Key`.
+- **O sensor não escolhe o `id`.** A API recebe a leitura em um objeto próprio (`LeituraRequest`), valida os campos (nome da máquina, timestamp, temperatura, vibração e rotação) e sempre cria um registro novo. Antes, a entidade do banco era recebida direto, e um `POST` com o `id` de um registro existente o sobrescrevia (há um teste para isso).
+- **Mensagem estragada não trava a fila.** O gateway Node descarta (sem devolver à fila) a mensagem que não for um JSON com `idMaquina`, e reconecta no RabbitMQ sozinho, esperando 1 s, 2 s, 4 s... até 30 s.
 - **Testes sem serviços externos.** Os testes usam banco H2 em memória e um RabbitMQ simulado, então rodam em qualquer máquina e no CI sem Docker.
 
 ## O que aprendi
@@ -171,9 +181,11 @@ cd iot-core
 ## Limitações conhecidas e próximos passos
 
 - Existe um único usuário fixo no código (`admin`); o próximo passo natural é ter usuários no banco com senha criptografada.
-- A configuração de CORS aceita qualquer origem (`*`).
-- `POST /api/sensores` não exige autenticação (veja acima).
-- Só a API Java tem testes automatizados; o gateway Node, o painel React e o simulador Python ainda não têm.
+- O CORS aceita qualquer origem (`*`) por padrão; em produção, defina `CORS_ORIGINS` na API Java e `CORS_ORIGIN` no gateway com o endereço do painel.
+- `POST /api/sensores` não exige autenticação por padrão (veja `SENSOR_API_KEY` acima).
+- Não há limite de tentativas no login.
+- O painel React ainda não tem testes automatizados.
+- O `docker-compose.yml` foi ajustado (endereços entre serviços, healthchecks e volume do banco) sem poder ser testado com Docker neste ambiente.
 
 ---
 

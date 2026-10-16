@@ -1,5 +1,6 @@
 package com.industria.iot_core.controller;
 
+import com.industria.iot_core.model.RegistroSensor;
 import com.industria.iot_core.repository.RegistroSensorRepository;
 import com.industria.iot_core.security.TokenService;
 import org.junit.jupiter.api.BeforeEach;
@@ -18,8 +19,11 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -124,5 +128,74 @@ class ApiSegurancaTest {
 
         assertThat(repository.count()).isEqualTo(1);
         verify(rabbitTemplate).convertAndSend(eq("sensores.fila"), anyString());
+    }
+
+    // ---------- Validação e proteção dos dados ----------
+
+    @Test
+    void sensorNaoConsegueSobrescreverUmRegistroExistenteMandandoOId() throws Exception {
+        RegistroSensor original = new RegistroSensor();
+        original.setIdMaquina("MAQ-01");
+        original.setTimestamp(1L);
+        original.setTemperaturaMotor(50.0);
+        original.setVibracao(1.0);
+        original.setRpm(1000);
+        Long idOriginal = repository.save(original).getId();
+
+        mockMvc.perform(post("/api/sensores")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"id\":" + idOriginal + ",\"idMaquina\":\"MAQ-99\",\"timestamp\":2,"
+                                + "\"temperaturaMotor\":99.0,\"vibracao\":1.0,\"rpm\":1}"))
+                .andExpect(status().isOk());
+
+        assertThat(repository.count()).isEqualTo(2);
+        assertThat(repository.findById(idOriginal).orElseThrow().getIdMaquina()).isEqualTo("MAQ-01");
+    }
+
+    @Test
+    void leituraSemCamposObrigatoriosEhRecusadaComErro400() throws Exception {
+        mockMvc.perform(post("/api/sensores")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"idMaquina\":\"MAQ-01\"}"))
+                .andExpect(status().isBadRequest());
+
+        assertThat(repository.count()).isZero();
+    }
+
+    @Test
+    void leituraComVibracaoOuRpmNegativosEhRecusada() throws Exception {
+        mockMvc.perform(post("/api/sensores")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"idMaquina\":\"MAQ-01\",\"timestamp\":1,\"temperaturaMotor\":70,\"vibracao\":-1,\"rpm\":-5}"))
+                .andExpect(status().isBadRequest());
+
+        assertThat(repository.count()).isZero();
+        verifyNoInteractions(rabbitTemplate);
+    }
+
+    @Test
+    void leituraComNomeDeMaquinaEmBrancoEhRecusada() throws Exception {
+        mockMvc.perform(post("/api/sensores")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"idMaquina\":\"  \",\"timestamp\":1,\"temperaturaMotor\":70,\"vibracao\":1,\"rpm\":1000}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void loginComCamposNulosDevolve401SemQuebrar() throws Exception {
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void preflightDoCorsLiberaOPainel() throws Exception {
+        mockMvc.perform(options("/api/sensores")
+                        .header("Origin", "https://painel.exemplo.com")
+                        .header("Access-Control-Request-Method", "GET")
+                        .header("Access-Control-Request-Headers", "authorization"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Access-Control-Allow-Origin", "*"));
     }
 }
