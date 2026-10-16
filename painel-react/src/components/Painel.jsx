@@ -23,34 +23,36 @@ export default function Painel({ token, tema, onAlternarTema, onSair, onSessaoIn
     <div className="mx-auto max-w-6xl px-4 py-5 sm:px-6 sm:py-8">
       <Cabecalho conexao={conexao} tema={tema} onAlternarTema={onAlternarTema} onSair={onSair} />
 
-      <ResumoFabrica
-        resumo={resumo}
-        maquinasAfetadas={resumo.nivel === 'critico' || resumo.nivel === 'atencao' ? afetadas : []}
-        total={MAQUINAS.length}
-      />
+      <main>
+        <ResumoFabrica
+          resumo={resumo}
+          maquinasAfetadas={resumo.nivel === 'critico' || resumo.nivel === 'atencao' ? afetadas : []}
+          total={MAQUINAS.length}
+        />
 
-      <div className="mt-6 flex flex-col gap-3">
-        {MAQUINAS.map((nome, i) => (
-          <LinhaMaquina
-            key={nome}
-            nome={nome}
-            dado={statusAtual[nome]}
-            avaliacao={avaliacoes[i]}
-            agora={agora}
-            serie={serieDaMaquina(historico, nome)}
-          />
-        ))}
-      </div>
+        <div className="mt-6 flex flex-col gap-3">
+          {MAQUINAS.map((nome, i) => (
+            <LinhaMaquina
+              key={nome}
+              nome={nome}
+              dado={statusAtual[nome]}
+              avaliacao={avaliacoes[i]}
+              agora={agora}
+              serie={serieDaMaquina(historico, nome)}
+            />
+          ))}
+        </div>
 
-      {erroHistorico && (
-        <p role="alert" className="mt-6 rounded border border-linha bg-painel px-4 py-3 text-sm">
-          Não foi possível carregar o histórico. As leituras novas continuam chegando em tempo real.
-        </p>
-      )}
+        {erroHistorico && (
+          <p role="alert" className="mt-6 rounded border border-linha bg-painel px-4 py-3 text-sm">
+            Não foi possível carregar o histórico. As leituras novas continuam chegando em tempo real.
+          </p>
+        )}
 
-      <Suspense fallback={<Skeleton className="mt-6 h-96 w-full rounded bg-linha/60" />}>
-        <GraficoTemperatura historico={historico} />
-      </Suspense>
+        <Suspense fallback={<Skeleton className="mt-6 h-96 w-full rounded bg-linha/60" />}>
+          <GraficoTemperatura historico={historico} />
+        </Suspense>
+      </main>
 
       <footer className="mt-8 flex flex-wrap justify-between gap-x-6 gap-y-1 border-t border-linha pt-4 text-sm text-suave">
         <p>

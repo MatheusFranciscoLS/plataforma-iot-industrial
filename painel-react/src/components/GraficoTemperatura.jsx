@@ -50,13 +50,18 @@ export default function GraficoTemperatura({ historico }) {
   const vazio = historico.length === 0;
 
   return (
-    <section aria-labelledby="titulo-grafico" className="mt-6 rounded border border-linha bg-painel p-5">
+    <section aria-labelledby="titulo-grafico" aria-describedby="descricao-grafico" className="mt-6 rounded border border-linha bg-painel p-5">
       <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2">
         <h2 id="titulo-grafico" className="font-condensada text-2xl font-semibold">
           Temperatura das máquinas
         </h2>
         <Legenda />
       </div>
+
+      <p id="descricao-grafico" className="sr-only">
+        Gráfico de linhas com a temperatura de cada máquina nos últimos instantes e a linha do limite de {LIMITE_TEMPERATURA} °C. Os valores
+        atuais estão nos cartões das máquinas.
+      </p>
 
       <div className="relative mt-4 h-72 w-full md:h-96">
         {vazio && (
