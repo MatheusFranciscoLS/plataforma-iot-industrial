@@ -1,5 +1,5 @@
 # Etapa 1: compila e empacota a aplicação em um único .jar
-FROM eclipse-temurin:21-jdk AS build
+FROM eclipse-temurin:24-jdk AS build
 WORKDIR /app
 
 # Copia primeiro só o necessário para baixar as dependências (aproveita o cache do Docker)
@@ -11,7 +11,7 @@ COPY src src
 RUN ./mvnw -B -q -DskipTests package
 
 # Etapa 2: imagem final, só com o Java necessário para rodar (sem Maven nem código-fonte)
-FROM eclipse-temurin:21-jre
+FROM eclipse-temurin:24-jre
 WORKDIR /app
 
 # Não roda como administrador dentro do container
