@@ -1,0 +1,25 @@
+name: Manter o demo ativo
+
+# O banco do demo (Supabase, plano grátis) pausa depois de cerca de 1 semana sem uso, e a API (Render, plano grátis)
+# dorme sem visitas. A rota de saúde da API consulta o banco, então chamá-la de tempos em tempos mantém os dois acordados.
+on:
+  schedule:
+    - cron: "0 12 */3 * *" # a cada 3 dias, ao meio-dia (UTC)
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  acordar-api:
+    name: Chamar a rota de saúde da API
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Chamar /actuator/health
+        # A API pode levar alguns minutos para acordar; tenta várias vezes antes de desistir.
+        run: |
+          curl --fail --silent --show-error \
+            --retry 8 --retry-delay 30 --retry-all-errors --max-time 120 \
+            https://iot-core-api.onrender.com/actuator/health
