@@ -1,5 +1,5 @@
 # Imagem super leve do Node
-FROM node:20-alpine
+FROM node:25-alpine
 
 WORKDIR /app
 
