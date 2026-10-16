@@ -27,6 +27,7 @@ const io = new Server(server, {
 });
 
 let rabbitConectado = false;
+let reconectando = false;
 
 // Usado por plataformas de hospedagem para saber se o serviço está de pé
 app.get('/saude', (req, res) => {
@@ -35,29 +36,59 @@ app.get('/saude', (req, res) => {
 
 io.use(criarAutenticador(CHAVE_SECRETA));
 
-async function consumirFila() {
-    const conexao = await conectarComRetentativa(() => amqp.connect(RABBITMQ_URL));
-    const canal = await conexao.createChannel();
-    await canal.assertQueue(FILA, { durable: true });
-    await canal.prefetch(20); // no máximo 20 mensagens sem confirmação por vez
+// Uma tentativa completa: conecta, abre o canal e começa a consumir a fila.
+// Se qualquer passo falhar, fecha a conexão e lança o erro (quem chamou tenta de novo).
+async function configurarConsumo() {
+    const conexao = await amqp.connect(RABBITMQ_URL);
+    // Sem um ouvinte de 'error', o Node derrubaria o processo inteiro por qualquer falha de rede
+    conexao.on('error', (erro) => console.error('Erro na conexão com o RabbitMQ:', erro.message));
+    conexao.on('close', aoPerderConexao);
 
-    rabbitConectado = true;
-    console.log('🐰 Conectado ao RabbitMQ! Ouvindo a fila...');
+    try {
+        const canal = await conexao.createChannel();
+        canal.on('error', (erro) => console.error('Erro no canal do RabbitMQ:', erro.message));
+        // Se só o canal cair, derruba a conexão também, para cair no caminho de reconexão
+        canal.on('close', () => conexao.close().catch(() => {}));
 
-    // Se a conexão cair, volta a conectar sozinho em vez de ficar surdo para sempre
-    const aoPerder = (motivo) => {
-        if (!rabbitConectado) return; // 'error' e 'close' chegam juntos; só reage uma vez
-        rabbitConectado = false;
-        console.error(`Conexão com o RabbitMQ perdida (${motivo}). Reconectando...`);
-        consumirFila().catch((erro) => console.error('Erro ao reconectar:', erro));
-    };
-    conexao.on('error', (erro) => aoPerder(erro.message));
-    conexao.on('close', () => aoPerder('conexão fechada'));
+        await canal.assertQueue(FILA, { durable: true });
+        await canal.prefetch(20); // no máximo 20 mensagens sem confirmação por vez
+        await canal.consume(FILA, (msg) => {
+            if (msg === null) {
+                console.error('O RabbitMQ cancelou o consumo da fila. Reconectando...');
+                canal.close().catch(() => {});
+                return;
+            }
+            processarMensagem(msg, canal, io);
+        });
+    } catch (erro) {
+        conexao.removeListener('close', aoPerderConexao);
+        await conexao.close().catch(() => {});
+        throw erro;
+    }
 
-    canal.consume(FILA, (msg) => processarMensagem(msg, canal, io));
+    return conexao;
 }
 
-consumirFila().catch((erro) => {
+async function iniciarConsumo() {
+    reconectando = true;
+    await conectarComRetentativa(configurarConsumo);
+    reconectando = false;
+    rabbitConectado = true;
+    console.log('🐰 Conectado ao RabbitMQ! Ouvindo a fila...');
+}
+
+// Se a conexão cair depois de pronta, volta a conectar sozinho em vez de ficar surdo para sempre
+function aoPerderConexao() {
+    if (reconectando) return;
+    rabbitConectado = false;
+    console.error('Conexão com o RabbitMQ perdida. Reconectando...');
+    iniciarConsumo().catch((erro) => {
+        console.error('Erro ao reconectar:', erro);
+        process.exit(1);
+    });
+}
+
+iniciarConsumo().catch((erro) => {
     console.error('Erro no RabbitMQ:', erro);
     process.exit(1);
 });

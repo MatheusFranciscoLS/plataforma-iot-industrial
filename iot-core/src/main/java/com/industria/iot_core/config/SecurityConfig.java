@@ -41,6 +41,8 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(HttpMethod.POST, "/api/auth/login").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/sensores").permitAll()
+                // Erros de validação (400) são reenviados internamente para /error; sem isso viram 403
+                .requestMatchers("/error").permitAll()
                 .anyRequest().authenticated()
             )
             // O leitor de token roda ANTES do filtro de login do Spring Security
