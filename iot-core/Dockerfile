@@ -1,17 +1,24 @@
-# Usamos uma imagem oficial do Java de alta performance
-FROM eclipse-temurin:21-jdk
-
-# Pasta de trabalho no container
+# Etapa 1: compila e empacota a aplicação em um único .jar
+FROM eclipse-temurin:21-jdk AS build
 WORKDIR /app
 
-# Copiamos tudo da pasta iot-core para dentro do container
-COPY . .
+# Copia primeiro só o necessário para baixar as dependências (aproveita o cache do Docker)
+COPY mvnw pom.xml ./
+COPY .mvn .mvn
+RUN chmod +x ./mvnw && ./mvnw -B -q dependency:go-offline
 
-# Segredo de Sênior: Precisamos dar permissão para o Docker executar o arquivo do Maven
-RUN chmod +x ./mvnw
+COPY src src
+RUN ./mvnw -B -q -DskipTests package
 
-# Expomos a porta da nossa API
+# Etapa 2: imagem final, só com o Java necessário para rodar (sem Maven nem código-fonte)
+FROM eclipse-temurin:21-jre
+WORKDIR /app
+
+# Não roda como administrador dentro do container
+RUN useradd --system --no-create-home iot
+USER iot
+
+COPY --from=build /app/target/*.jar app.jar
+
 EXPOSE 8080
-
-# O comando para ligar o Spring Boot
-CMD ["./mvnw", "spring-boot:run"]
+CMD ["java", "-jar", "app.jar"]

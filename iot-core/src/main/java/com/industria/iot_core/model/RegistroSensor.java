@@ -4,7 +4,8 @@ import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "registro_sensor")
+// Índice no timestamp: o histórico sempre busca os registros mais recentes
+@Table(name = "registro_sensor", indexes = @Index(name = "idx_registro_sensor_timestamp", columnList = "timestamp"))
 public class RegistroSensor {
 
     @Id

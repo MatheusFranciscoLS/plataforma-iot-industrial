@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import javax.crypto.SecretKey;
+import java.nio.charset.StandardCharsets;
 import java.util.Date;
 
 @Service
@@ -16,16 +17,16 @@ public class TokenService {
     private String CHAVE_SECRETA;
 
     private SecretKey getChaveAssinatura() {
-        return Keys.hmacShaKeyFor(CHAVE_SECRETA.getBytes());
+        return Keys.hmacShaKeyFor(CHAVE_SECRETA.getBytes(StandardCharsets.UTF_8));
     }
 
     public String gerarToken(String usuario) {
         return Jwts.builder()
-                .subject(usuario) // Nome do funcionário no crachá
+                .subject(usuario) // Nome do usuário dono do token
                 .issuedAt(new Date()) // Data e hora de emissão
-                // Validade do crachá: 2 horas (em milissegundos)
-                .expiration(new Date(System.currentTimeMillis() + 7200000)) 
-                .signWith(getChaveAssinatura()) // Carimbo criptográfico
+                // Validade do token: 2 horas (em milissegundos)
+                .expiration(new Date(System.currentTimeMillis() + 7200000))
+                .signWith(getChaveAssinatura()) // Assinatura criptográfica
                 .compact();
     }
 }
