@@ -17,7 +17,7 @@ export default function Painel({ token, tema, onAlternarTema, onSair, onSessaoIn
 
   const avaliacoes = MAQUINAS.map((nome) => avaliarMaquina(statusAtual[nome], agora));
   const resumo = resumirFabrica(avaliacoes);
-  const afetadas = MAQUINAS.filter((_, i) => avaliacoes[i].estado === (resumo.nivel === 'critico' ? 'critica' : 'sem-sinal'));
+  const afetadas = MAQUINAS.filter((_, i) => (resumo.nivel === 'critico' ? avaliacoes[i].estado === 'critica' : avaliacoes[i].estado === 'sem-sinal' || avaliacoes[i].estado === 'sem-dados'));
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-5 sm:px-6 sm:py-8">

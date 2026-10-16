@@ -34,8 +34,9 @@ export function avaliarMaquina(dado, agora) {
 /** Frase única que resume a fábrica inteira. */
 export function resumirFabrica(avaliacoes) {
   const criticas = avaliacoes.filter((a) => a.estado === 'critica');
-  const semSinal = avaliacoes.filter((a) => a.estado === 'sem-sinal');
   const aguardando = avaliacoes.filter((a) => a.estado === 'sem-dados');
+  // Máquina que nunca mandou leitura, enquanto as outras mandam, também conta como sem sinal.
+  const semSinal = avaliacoes.filter((a) => a.estado === 'sem-sinal' || a.estado === 'sem-dados');
 
   if (criticas.length > 0) {
     return {

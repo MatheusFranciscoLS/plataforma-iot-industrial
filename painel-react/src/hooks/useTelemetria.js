@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { io } from 'socket.io-client';
 import { API_NODE, buscarHistorico, SessaoInvalidaError } from '../lib/api';
-import { adicionarLeitura, agruparHistorico } from '../lib/historico';
+import { agruparHistorico, mesclarLeituras, ultimasLeituras } from '../lib/historico';
 
 /**
  * Carrega o histórico e acompanha as leituras novas em tempo real.
@@ -9,7 +9,7 @@ import { adicionarLeitura, agruparHistorico } from '../lib/historico';
  * `onSessaoInvalida` é chamada quando o servidor recusa o token.
  */
 export function useTelemetria(token, onSessaoInvalida) {
-  const [historico, setHistorico] = useState([]);
+  const [leituras, setLeituras] = useState([]);
   const [statusAtual, setStatusAtual] = useState({});
   const [conexao, setConexao] = useState('conectando');
   const [erroHistorico, setErroHistorico] = useState(false);
@@ -19,7 +19,11 @@ export function useTelemetria(token, onSessaoInvalida) {
 
     buscarHistorico(token)
       .then((registros) => {
-        if (ativo) setHistorico(agruparHistorico(registros));
+        if (!ativo) return;
+        // Junta com o que já chegou ao vivo, em vez de trocar. Uma máquina que já estava muda
+        // ao abrir a página aparece como "sem sinal" por causa da hora da última leitura dela.
+        setLeituras((atuais) => mesclarLeituras(registros, atuais));
+        setStatusAtual((atual) => ({ ...ultimasLeituras(registros), ...atual }));
       })
       .catch((erro) => {
         if (!ativo) return;
@@ -43,7 +47,7 @@ export function useTelemetria(token, onSessaoInvalida) {
 
     socket.on('novoRegistro', (dado) => {
       setStatusAtual((anterior) => ({ ...anterior, [dado.idMaquina]: { ...dado, recebidoEm: Date.now() } }));
-      setHistorico((anterior) => adicionarLeitura(anterior, dado));
+      setLeituras((anteriores) => mesclarLeituras(anteriores, [dado]));
     });
 
     return () => {
@@ -51,6 +55,8 @@ export function useTelemetria(token, onSessaoInvalida) {
       socket.disconnect();
     };
   }, [token, onSessaoInvalida]);
+
+  const historico = useMemo(() => agruparHistorico(leituras), [leituras]);
 
   return { historico, statusAtual, conexao, erroHistorico };
 }

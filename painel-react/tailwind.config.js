@@ -26,7 +26,7 @@ export default {
         muted: { DEFAULT: cor('linha'), foreground: cor('suave') },
         accent: { DEFAULT: cor('linha'), foreground: cor('tinta') },
         popover: { DEFAULT: cor('painel'), foreground: cor('tinta') },
-        input: cor('linha'),
+        input: cor('campo'),
         ring: cor('aco'),
       },
       fontFamily: {

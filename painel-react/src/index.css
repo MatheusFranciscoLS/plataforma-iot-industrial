@@ -16,6 +16,7 @@
     --tinta: 28 32 36;
     --suave: 91 100 107;
     --linha: 197 202 198;
+    --campo: 122 132 139; /* borda de campos e botões: contraste 3:1 com o painel */
     --aco: 43 74 94;
     --alarme: 183 28 28;
     --alarme-fundo: 250 224 224;
@@ -31,6 +32,7 @@
     --tinta: 232 234 234;
     --suave: 154 163 169;
     --linha: 52 57 61;
+    --campo: 110 118 124;
     --aco: 143 179 201;
     --alarme: 255 120 108;
     --alarme-fundo: 58 28 27;

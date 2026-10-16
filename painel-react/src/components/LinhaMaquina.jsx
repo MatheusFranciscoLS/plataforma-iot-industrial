@@ -72,24 +72,24 @@ export default function LinhaMaquina({ nome, dado, avaliacao, agora, serie }) {
         <p className="text-sm text-suave col-span-2 md:col-span-3">Os valores aparecem assim que a máquina enviar a primeira leitura.</p>
       ) : (
         <>
-          <Metrica rotulo="Temperatura do motor" className={semSinal ? 'opacity-60' : undefined}>
-            <p className={cn('numero text-4xl leading-tight', dado.temperaturaMotor > LIMITE_TEMPERATURA && 'text-alarme')}>
+          <Metrica rotulo="Temperatura do motor">
+            <p className={cn('numero text-4xl leading-tight', semSinal && 'text-suave', dado.temperaturaMotor > LIMITE_TEMPERATURA && 'text-alarme')}>
               {formatarNumero(dado.temperaturaMotor, 1, 1)}
               <span className="ml-1 text-lg font-medium text-suave">°C</span>
             </p>
             <Medidor valor={dado.temperaturaMotor} limite={LIMITE_TEMPERATURA} {...TEMP} rotulo={`Temperatura de ${nome}`} />
           </Metrica>
 
-          <Metrica rotulo="Vibração" className={semSinal ? 'opacity-60' : undefined}>
-            <p className={cn('numero text-4xl leading-tight', dado.vibracao > LIMITE_VIBRACAO && 'text-alarme')}>
+          <Metrica rotulo="Vibração">
+            <p className={cn('numero text-4xl leading-tight', semSinal && 'text-suave', dado.vibracao > LIMITE_VIBRACAO && 'text-alarme')}>
               {formatarNumero(dado.vibracao, 2, 2)}
               <span className="ml-1 text-lg font-medium text-suave">mm/s</span>
             </p>
             <Medidor valor={dado.vibracao} limite={LIMITE_VIBRACAO} {...VIB} rotulo={`Vibração de ${nome}`} />
           </Metrica>
 
-          <Metrica rotulo="Rotação" className={semSinal ? 'opacity-60' : undefined}>
-            <p className="numero text-4xl leading-tight">{formatarNumero(dado.rpm, 0)}</p>
+          <Metrica rotulo="Rotação">
+            <p className={cn('numero text-4xl leading-tight', semSinal && 'text-suave')}>{formatarNumero(dado.rpm, 0)}</p>
             <p className="text-sm text-suave">rpm</p>
           </Metrica>
         </>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { adicionarLeitura, agruparHistorico, MAX_PONTOS, serieDaMaquina } from './historico';
+import { adicionarLeitura, agruparHistorico, MAX_PONTOS, mesclarLeituras, serieDaMaquina, ultimasLeituras } from './historico';
 import { avaliarMaquina, resumirFabrica, SEM_SINAL_APOS_S } from './limites';
 import { lerExpiracao, tokenExpirado } from './token';
 
@@ -67,6 +67,11 @@ describe('resumirFabrica', () => {
     expect(resumirFabrica(av('critica', 'critica', 'normal')).texto).toBe('2 máquinas em estado crítico');
   });
 
+  it('máquina muda enquanto as outras funcionam não é "tudo normal"', () => {
+    expect(resumirFabrica(av('normal', 'normal', 'sem-dados'))).toEqual({ nivel: 'atencao', texto: '1 máquina sem sinal' });
+    expect(resumirFabrica(av('normal', 'sem-sinal', 'sem-sinal')).texto).toBe('2 máquinas sem sinal');
+  });
+
   it('aguardando quando nenhuma máquina enviou dados', () => {
     expect(resumirFabrica(av('sem-dados', 'sem-dados', 'sem-dados')).nivel).toBe('aguardando');
   });
@@ -80,16 +85,43 @@ describe('historico', () => {
   it('agrupa leituras do mesmo instante, ordena e limita a 20 pontos', () => {
     const registros = [];
     for (let t = 1; t <= 25; t++) {
-      registros.push({ idMaquina: 'MAQ-01', timestamp: t, temperaturaMotor: 70 + t });
-      registros.push({ idMaquina: 'MAQ-02', timestamp: t, temperaturaMotor: 60 + t });
+      registros.push({ idMaquina: 'MAQ-01', timestamp: t * 5, temperaturaMotor: 70 + t });
+      registros.push({ idMaquina: 'MAQ-02', timestamp: t * 5, temperaturaMotor: 60 + t });
     }
     registros.reverse(); // a API devolve do mais novo para o mais antigo
 
     const pontos = agruparHistorico(registros);
 
     expect(pontos).toHaveLength(MAX_PONTOS);
-    expect(pontos[0].timestamp).toBe(6);
-    expect(pontos.at(-1)).toEqual({ timestamp: 25, 'MAQ-01': 95, 'MAQ-02': 85 });
+    expect(pontos[0].timestamp).toBe(30);
+    expect(pontos.at(-1)).toEqual({ timestamp: 125, 'MAQ-01': 95, 'MAQ-02': 85 });
+  });
+
+  it('o histórico agrupa com a mesma regra do ao vivo (virada de segundo no meio da rodada)', () => {
+    const registros = [
+      { idMaquina: 'MAQ-01', timestamp: 100, temperaturaMotor: 80 },
+      { idMaquina: 'MAQ-02', timestamp: 100, temperaturaMotor: 70 },
+      { idMaquina: 'MAQ-03', timestamp: 101, temperaturaMotor: 75 },
+    ];
+    expect(agruparHistorico(registros)).toEqual([{ timestamp: 100, 'MAQ-01': 80, 'MAQ-02': 70, 'MAQ-03': 75 }]);
+  });
+
+  it('mesclarLeituras tira repetidas pelo id e guarda as leituras ao vivo que chegaram antes do histórico', () => {
+    const api = [{ id: 1, idMaquina: 'MAQ-01', timestamp: 10, temperaturaMotor: 80 }, { id: 2, idMaquina: 'MAQ-01', timestamp: 12, temperaturaMotor: 81 }];
+    const aoVivo = [{ id: 2, idMaquina: 'MAQ-01', timestamp: 12, temperaturaMotor: 81 }, { id: 3, idMaquina: 'MAQ-01', timestamp: 14, temperaturaMotor: 82 }];
+
+    expect(mesclarLeituras(api, aoVivo).map((l) => l.id)).toEqual([1, 2, 3]);
+  });
+
+  it('ultimasLeituras pega a mais nova de cada máquina e usa a hora dela como recebidoEm', () => {
+    const r = ultimasLeituras([
+      { idMaquina: 'MAQ-01', timestamp: 20, temperaturaMotor: 82 },
+      { idMaquina: 'MAQ-01', timestamp: 10, temperaturaMotor: 80 },
+      { idMaquina: 'MAQ-02', timestamp: 15, temperaturaMotor: 70 },
+    ]);
+
+    expect(r['MAQ-01']).toMatchObject({ temperaturaMotor: 82, recebidoEm: 20_000 });
+    expect(r['MAQ-02'].recebidoEm).toBe(15_000);
   });
 
   it('leitura com menos de 2 s de diferença entra no último ponto', () => {
