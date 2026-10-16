@@ -19,7 +19,11 @@ export function tokenExpirado(token, agoraMs = Date.now()) {
 export function lerTokenSalvo() {
   try {
     const token = localStorage.getItem(CHAVE);
-    return token && !tokenExpirado(token) ? token : null;
+    if (token && tokenExpirado(token)) {
+      localStorage.removeItem(CHAVE); // não deixa um token vencido guardado
+      return null;
+    }
+    return token;
   } catch {
     return null;
   }

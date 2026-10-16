@@ -8,4 +8,8 @@ export default defineConfig({
   resolve: {
     alias: { '@': path.resolve(import.meta.dirname, 'src') },
   },
+  test: {
+    // Os testes de telas pedem o jsdom no próprio arquivo (// @vitest-environment jsdom).
+    setupFiles: ['./src/test/setup.js'],
+  },
 })
