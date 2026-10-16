@@ -1,0 +1,42 @@
+name: CI do painel
+
+on:
+  push:
+    branches: [main]
+    paths: ["painel-react/**", ".github/workflows/ci-painel.yml"]
+  pull_request:
+    paths: ["painel-react/**", ".github/workflows/ci-painel.yml"]
+
+permissions:
+  contents: read
+
+jobs:
+  painel-react:
+    name: Lint, testes e build do painel
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: painel-react
+
+    steps:
+      - name: Baixar o código
+        uses: actions/checkout@v4
+
+      - name: Instalar o Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: painel-react/package-lock.json
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Testes
+        run: npm test
+
+      - name: Build
+        run: npm run build

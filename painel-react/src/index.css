@@ -1,3 +1,79 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/*
+  Cores do painel. Seguem a ideia dos painéis de sala de controle:
+  o fundo e os valores normais ficam em cinza e a única cor forte é o alarme,
+  assim uma máquina em estado crítico nunca passa despercebida.
+  Os valores são "R G B" para o Tailwind poder aplicar transparência.
+*/
+@layer base {
+  :root {
+    color-scheme: light;
+    --fundo: 228 231 228;
+    --painel: 244 245 243;
+    --tinta: 28 32 36;
+    --suave: 91 100 107;
+    --linha: 197 202 198;
+    --aco: 43 74 94;
+    --alarme: 183 28 28;
+    --alarme-fundo: 250 224 224;
+    --serie-1: 28 32 36;
+    --serie-2: 43 74 94;
+    --serie-3: 111 143 139;
+  }
+
+  :root[data-tema='escuro'] {
+    color-scheme: dark;
+    --fundo: 22 24 26;
+    --painel: 31 34 37;
+    --tinta: 232 234 234;
+    --suave: 154 163 169;
+    --linha: 52 57 61;
+    --aco: 143 179 201;
+    --alarme: 255 120 108;
+    --alarme-fundo: 58 28 27;
+    --serie-1: 232 234 234;
+    --serie-2: 143 179 201;
+    --serie-3: 142 170 165;
+  }
+
+  body {
+    @apply bg-fundo font-sans text-tinta antialiased;
+  }
+
+  :focus-visible {
+    outline: 2px solid rgb(var(--aco));
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+@layer components {
+  /* Números grandes: fonte condensada e algarismos de largura fixa, para não "pularem" a cada leitura. */
+  .numero {
+    @apply font-condensada font-semibold;
+    font-variant-numeric: tabular-nums;
+  }
+
+}
+
+@keyframes pulso-ao-vivo {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}

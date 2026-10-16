@@ -18,7 +18,7 @@ Uma arquitetura de microsserviços ponta a ponta para monitoramento em tempo rea
 # 📸 Painel em funcionamento
 
 <p align="center">
-  <img src="docs/painel.webp" alt="Painel de monitoramento com temperatura, RPM e vibração de três máquinas e o histórico de temperatura da frota" width="100%">
+  <img src="docs/painel-claro.png" alt="Painel de monitoramento com uma faixa vermelha avisando que uma máquina está em estado crítico, os cartões de temperatura, vibração e rotação das três máquinas e o gráfico de temperatura com a linha do limite" width="100%">
 </p>
 
 A máquina em estado crítico (MAQ-01) é destacada em vermelho; o gráfico mostra o histórico de temperatura da frota.
