@@ -1,10 +1,27 @@
 <!doctype html>
-<html lang="en">
+<html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>painel-react</title>
+    <meta name="description" content="Painel de monitoramento em tempo real de temperatura, rotação e vibração de máquinas industriais." />
+    <title>Monitoramento da fábrica</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@500;600&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- Aplica o tema antes de desenhar a página, para não piscar de claro para escuro. -->
+    <script>
+      try {
+        var salvo = localStorage.getItem('tema');
+        var escuro = salvo ? salvo === 'escuro' : window.matchMedia('(prefers-color-scheme: dark)').matches;
+        if (escuro) document.documentElement.dataset.tema = 'escuro';
+      } catch (e) {}
+    </script>
   </head>
   <body>
     <div id="root"></div>
