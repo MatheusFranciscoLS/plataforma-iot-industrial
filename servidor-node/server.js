@@ -4,72 +4,62 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const amqp = require('amqplib');
-const jwt = require('jsonwebtoken');
+const { criarAutenticador, processarMensagem, conectarComRetentativa, lerOrigens } = require('./gateway');
+
+// A mesma chave do TokenService.java. Sem ela ninguém conseguiria entrar, então é melhor nem subir.
+const CHAVE_SECRETA = process.env.JWT_SECRET;
+if (!CHAVE_SECRETA) {
+    console.error('JWT_SECRET não definida: o gateway não tem como validar os tokens.');
+    process.exit(1);
+}
+
+const RABBITMQ_URL = process.env.RABBITMQ_URL || 'amqp://localhost';
+const FILA = 'sensores.fila';
+const PORTA = process.env.PORT || 3000;
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
     cors: {
-        origin: "*", // Aceita conexões de qualquer lugar
-        methods: ["GET", "POST"]
+        origin: lerOrigens(process.env.CORS_ORIGIN), // sem CORS_ORIGIN, aceita qualquer origem
+        methods: ['GET', 'POST']
     }
-}
-);
-
-// A mesma chave idêntica do TokenService.java!
-const CHAVE_SECRETA = process.env.JWT_SECRET;
-
-// O Middleware de Segurança do Socket.io
-io.use((socket, next) => {
-    // O React vai mandar o token dentro de um objeto 'auth'
-    const token = socket.handshake.auth.token;
-
-    if (!token) {
-        console.log("🚫 Conexão recusada: Nenhum token fornecido.");
-        return next(new Error("Acesso negado: Token ausente"));
-    }
-
-    // Tenta decodificar e validar o token
-    jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
-        if (err) {
-            console.log("🚫 Conexão recusada: Token inválido ou expirado.");
-            return next(new Error("Acesso negado: Token inválido"));
-        }
-        
-        // Se a chave bateu, libera a catraca!
-        console.log(`✅ Conexão autorizada para o usuário: ${decoded.sub}`);
-        next();
-    });
 });
 
-async function conectarRabbitMQ() {
-    try {
-        // Conecta no RabbitMQ pelo nome do container
-        // O Node vai tentar usar a URL da Nuvem. Se não achar, usa o localhost.
-const RABBITMQ_URL = process.env.RABBITMQ_URL || 'amqp://localhost';
-const connection = await amqp.connect(RABBITMQ_URL);
-        const channel = await connection.createChannel();
-        await channel.assertQueue('sensores.fila', { durable: true });
+let rabbitConectado = false;
 
-        console.log("🐰 Conectado ao RabbitMQ! Ouvindo a fila...");
+// Usado por plataformas de hospedagem para saber se o serviço está de pé
+app.get('/saude', (req, res) => {
+    res.status(rabbitConectado ? 200 : 503).json({ status: rabbitConectado ? 'ok' : 'sem-rabbitmq' });
+});
 
-        // Fica vigiando a fila
-        channel.consume('sensores.fila', (msg) => {
-            if (msg !== null) {
-                const dados = JSON.parse(msg.content.toString());
-                console.log("📡 Repassando do Rabbit p/ React:", dados.idMaquina);
-                
-                // Repassa para o React
-                io.emit('novoRegistro', dados);
-                
-                channel.ack(msg); // Confirma que leu a mensagem
-            }
-        });
-    } catch (error) {
-        console.error("Erro no RabbitMQ:", error);
-    }
+io.use(criarAutenticador(CHAVE_SECRETA));
+
+async function consumirFila() {
+    const conexao = await conectarComRetentativa(() => amqp.connect(RABBITMQ_URL));
+    const canal = await conexao.createChannel();
+    await canal.assertQueue(FILA, { durable: true });
+    await canal.prefetch(20); // no máximo 20 mensagens sem confirmação por vez
+
+    rabbitConectado = true;
+    console.log('🐰 Conectado ao RabbitMQ! Ouvindo a fila...');
+
+    // Se a conexão cair, volta a conectar sozinho em vez de ficar surdo para sempre
+    const aoPerder = (motivo) => {
+        if (!rabbitConectado) return; // 'error' e 'close' chegam juntos; só reage uma vez
+        rabbitConectado = false;
+        console.error(`Conexão com o RabbitMQ perdida (${motivo}). Reconectando...`);
+        consumirFila().catch((erro) => console.error('Erro ao reconectar:', erro));
+    };
+    conexao.on('error', (erro) => aoPerder(erro.message));
+    conexao.on('close', () => aoPerder('conexão fechada'));
+
+    canal.consume(FILA, (msg) => processarMensagem(msg, canal, io));
 }
 
-conectarRabbitMQ();
+consumirFila().catch((erro) => {
+    console.error('Erro no RabbitMQ:', erro);
+    process.exit(1);
+});
 
-server.listen(3000, () => console.log('🚀 Node.js Gateway rodando...'));
+server.listen(PORTA, () => console.log(`🚀 Node.js Gateway rodando na porta ${PORTA}...`));

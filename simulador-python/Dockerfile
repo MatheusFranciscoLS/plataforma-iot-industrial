@@ -1,6 +1,14 @@
-FROM python:3.9-slim
+FROM python:3.12-slim
 WORKDIR /usr/src/app
-COPY . .
-# A linha abaixo é a que importa, garantindo que requests e pika sejam instalados
-RUN pip install requests pika
-CMD ["python", "simulador.py"]
+
+# Instala as dependências primeiro (aproveita o cache do Docker quando só o código muda)
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY simulador.py .
+
+# Não roda como administrador dentro do container
+RUN useradd --system --no-create-home simulador
+USER simulador
+
+CMD ["python", "-u", "simulador.py"]

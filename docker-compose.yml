@@ -6,44 +6,71 @@ services:
       - POSTGRES_USER=admin_iot
       - POSTGRES_PASSWORD=senha_nova_123
       - POSTGRES_DB=iot_plataforma
+    volumes:
+      - postgres-dados:/var/lib/postgresql/data # os dados sobrevivem a um "docker compose down"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin_iot -d iot_plataforma"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
-  # --- NOVO: O nosso Correio Central (RabbitMQ) ---
+  # 2. O Correio Central (RabbitMQ)
   rabbitmq:
     image: rabbitmq:3-management-alpine
     ports:
       - "5672:5672"   # Porta interna por onde os sistemas conversam
       - "15672:15672" # Painel visual para você acessar no navegador
-  # ------------------------------------------------
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
 
-  # 2. O Coração Java (API)
+  # 3. O Coração Java (API)
   iot-core:
     build: ./iot-core
     ports:
       - "8080:8080"
+    environment:
+      # Dentro do Docker, cada serviço é encontrado pelo nome (e não por "localhost")
+      - DB_URL=jdbc:postgresql://postgres-db:5432/iot_plataforma
+      - DB_USER=admin_iot
+      - DB_PASS=senha_nova_123
+      - RABBITMQ_URL=amqp://rabbitmq:5672
     depends_on:
-      - postgres-db
-      - rabbitmq # NOVO: O Java espera o correio abrir
-    restart: always
+      postgres-db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    restart: on-failure
 
-# 3. O Mensageiro Node (Gateway)
+  # 4. O Mensageiro Node (Gateway)
   servidor-node:
     build: ./servidor-node
     ports:
       - "3000:3000"
     environment:
       - JWT_SECRET=MinhaChaveSuperSecretaParaAIndustriaIot2026!
+      - RABBITMQ_URL=amqp://rabbitmq:5672
     depends_on:
-      - rabbitmq
+      rabbitmq:
+        condition: service_healthy
+    restart: on-failure
 
-# 4. O Simulador Python
+  # 5. O Simulador Python (envia as leituras para a API Java local)
   simulador-python:
     build: ./simulador-python
     environment:
-      - RABBITMQ_URL=amqps://bdxeeslm:kVgRW8QfT_3HpBR9JqHLXJ3XXIOhn8hp@seal.lmq.cloudamqp.com/bdxeeslm
-      - JAVA_URL=https://iot-core-api.onrender.com/api/sensores
+      - JAVA_URL=http://iot-core:8080/api/sensores
+    depends_on:
+      - iot-core
+    restart: on-failure
 
-  # 5. A Interface React
+  # 6. A Interface React
   painel-react:
     build: ./painel-react
     ports:
       - "5173:5173"
+
+volumes:
+  postgres-dados:
