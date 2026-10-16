@@ -1,5 +1,6 @@
-export const API_JAVA = import.meta.env.VITE_API_JAVA;
-export const API_NODE = import.meta.env.VITE_API_NODE;
+// Endereços da API Java e do gateway. Sem as variáveis VITE_API_JAVA e VITE_API_NODE, usa os da própria máquina.
+export const API_JAVA = import.meta.env.VITE_API_JAVA ?? 'http://localhost:8080';
+export const API_NODE = import.meta.env.VITE_API_NODE ?? 'http://localhost:3000';
 
 export class SessaoInvalidaError extends Error {}
 

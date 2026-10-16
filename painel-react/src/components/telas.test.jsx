@@ -1,0 +1,141 @@
+// @vitest-environment jsdom
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { describe, expect, it, vi } from 'vitest';
+import Login from './Login';
+import LinhaMaquina from './LinhaMaquina';
+import ResumoFabrica from './ResumoFabrica';
+import { avaliarMaquina, resumirFabrica } from '@/lib/limites';
+
+const AGORA = 1_000_000;
+
+const leitura = (extra = {}) => ({
+  idMaquina: 'MAQ-01',
+  timestamp: 100,
+  temperaturaMotor: 80.5,
+  vibracao: 2.25,
+  rpm: 1800,
+  recebidoEm: AGORA,
+  ...extra,
+});
+
+function linha(dado, agora = AGORA) {
+  return render(
+    <LinhaMaquina nome="MAQ-01" dado={dado} avaliacao={avaliarMaquina(dado, agora)} agora={agora} serie={[70, 75, 80]} />,
+  );
+}
+
+describe('LinhaMaquina', () => {
+  it('máquina normal mostra os valores com vírgula e o estado Normal', () => {
+    linha(leitura());
+
+    expect(screen.getByRole('heading', { name: 'MAQ-01' })).toBeInTheDocument();
+    expect(screen.getByText('Normal')).toBeInTheDocument();
+    expect(screen.getByText('80,5')).toBeInTheDocument();
+    expect(screen.getByText('2,25')).toBeInTheDocument();
+    expect(screen.getByText('1.800')).toBeInTheDocument();
+    expect(screen.queryByText(/acima de/)).not.toBeInTheDocument();
+  });
+
+  it('máquina crítica mostra o estado e o motivo de cada limite ultrapassado', () => {
+    linha(leitura({ temperaturaMotor: 99, vibracao: 5.5 }));
+
+    expect(screen.getByText('Crítica')).toBeInTheDocument();
+    expect(screen.getByText('Temperatura acima de 95 °C')).toBeInTheDocument();
+    expect(screen.getByText('Vibração acima de 5,0 mm/s')).toBeInTheDocument();
+    expect(screen.getByRole('article', { name: 'MAQ-01: Crítica' })).toBeInTheDocument();
+  });
+
+  it('leitura antiga vira "Sem sinal" e diz há quanto tempo foi a última', () => {
+    linha(leitura(), AGORA + 20_000);
+
+    expect(screen.getByText('Sem sinal')).toBeInTheDocument();
+    expect(screen.getByText(/há 20 s/)).toBeInTheDocument();
+  });
+
+  it('sem nenhuma leitura mostra que está aguardando', () => {
+    linha(undefined);
+
+    expect(screen.getByText('Aguardando leitura')).toBeInTheDocument();
+    expect(screen.getByText(/primeira leitura/)).toBeInTheDocument();
+  });
+
+  it('os medidores têm nome e valor para leitores de tela', () => {
+    linha(leitura());
+
+    expect(screen.getByRole('meter', { name: 'Temperatura de MAQ-01' })).toHaveAttribute('aria-valuenow', '80.5');
+    expect(screen.getByRole('meter', { name: 'Vibração de MAQ-01' })).toBeInTheDocument();
+  });
+});
+
+describe('ResumoFabrica', () => {
+  const estados = (...lista) => lista.map((estado) => ({ estado, motivos: [] }));
+
+  it('tudo normal diz quantas máquinas são monitoradas', () => {
+    render(<ResumoFabrica resumo={resumirFabrica(estados('normal', 'normal', 'normal'))} maquinasAfetadas={[]} total={3} />);
+
+    expect(screen.getByRole('status', { name: 'Resumo da fábrica' })).toHaveTextContent('Tudo normal');
+    expect(screen.getByRole('status', { name: 'Resumo da fábrica' })).toHaveTextContent('3 máquinas monitoradas');
+  });
+
+  it('máquina crítica aparece no resumo com o nome dela', () => {
+    render(<ResumoFabrica resumo={resumirFabrica(estados('critica', 'normal', 'normal'))} maquinasAfetadas={['MAQ-01']} total={3} />);
+
+    expect(screen.getByRole('status', { name: 'Resumo da fábrica' })).toHaveTextContent('1 máquina em estado crítico');
+    expect(screen.getByRole('status', { name: 'Resumo da fábrica' })).toHaveTextContent('MAQ-01');
+  });
+});
+
+describe('Login', () => {
+  const mockarResposta = (resposta) => vi.stubGlobal('fetch', vi.fn().mockResolvedValue(resposta));
+  const mockarFalhaDeRede = () => vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')));
+
+  async function preencherEEnviar(user) {
+    await user.type(screen.getByLabelText('Usuário'), 'admin');
+    await user.type(screen.getByLabelText('Senha'), 'qualquer');
+    await user.click(screen.getByRole('button', { name: 'Entrar' }));
+  }
+
+  it('login certo entrega o token para o app', async () => {
+    mockarResposta({ ok: true, status: 200, json: async () => ({ token: 'abc.def.ghi' }) });
+    const onEntrar = vi.fn();
+    render(<Login aviso="" onEntrar={onEntrar} />);
+
+    await preencherEEnviar(userEvent.setup());
+
+    await waitFor(() => expect(onEntrar).toHaveBeenCalledWith('abc.def.ghi'));
+  });
+
+  it('senha errada mostra a mensagem e não entra', async () => {
+    mockarResposta({ ok: false, status: 401, json: async () => ({}) });
+    const onEntrar = vi.fn();
+    render(<Login aviso="" onEntrar={onEntrar} />);
+
+    await preencherEEnviar(userEvent.setup());
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Usuário ou senha incorretos.');
+    expect(onEntrar).not.toHaveBeenCalled();
+  });
+
+  it('servidor fora do ar mostra uma mensagem de conexão', async () => {
+    mockarFalhaDeRede();
+    render(<Login aviso="" onEntrar={vi.fn()} />);
+
+    await preencherEEnviar(userEvent.setup());
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Não foi possível falar com o servidor');
+  });
+
+  it('mostra o aviso de sessão terminada vindo do app', () => {
+    render(<Login aviso="Sua sessão terminou. Entre de novo para continuar." onEntrar={vi.fn()} />);
+
+    expect(screen.getByRole('status')).toHaveTextContent('Sua sessão terminou');
+  });
+
+  it('os campos têm rótulo, para leitores de tela e para quem usa só o teclado', () => {
+    render(<Login aviso="" onEntrar={vi.fn()} />);
+
+    expect(screen.getByLabelText('Usuário')).toBeRequired();
+    expect(screen.getByLabelText('Senha')).toHaveAttribute('type', 'password');
+  });
+});
