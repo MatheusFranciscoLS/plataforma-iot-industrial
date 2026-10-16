@@ -1,0 +1,31 @@
+# Abre pull requests sozinho quando uma dependência ou imagem tem versão nova.
+version: 2
+updates:
+  - package-ecosystem: maven
+    directory: /iot-core
+    schedule: { interval: weekly }
+    open-pull-requests-limit: 5
+  - package-ecosystem: npm
+    directory: /painel-react
+    schedule: { interval: weekly }
+    open-pull-requests-limit: 5
+    groups:
+      menores-e-correcoes:
+        update-types: [minor, patch]
+  - package-ecosystem: npm
+    directory: /servidor-node
+    schedule: { interval: weekly }
+    open-pull-requests-limit: 5
+    groups:
+      menores-e-correcoes:
+        update-types: [minor, patch]
+  - package-ecosystem: pip
+    directory: /simulador-python
+    schedule: { interval: weekly }
+    open-pull-requests-limit: 5
+  - package-ecosystem: docker
+    directories: [/iot-core, /servidor-node, /simulador-python, /painel-react]
+    schedule: { interval: weekly }
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: { interval: weekly }
