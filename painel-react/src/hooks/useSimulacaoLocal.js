@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { mesclarLeituras, ultimasLeituras } from '../lib/historico';
-import { MAQUINAS } from '../lib/limites';
-import { gerarHistorico, INTERVALO_SIMULACAO_S, proximaLeitura } from '../lib/simulacaoLocal';
+import { gerarHistorico, INTERVALO_SIMULACAO_S, proximaRodada } from '../lib/simulacaoLocal';
 
 const RODADAS_INICIAIS = 30; // 1 minuto de histórico já pronto
 
@@ -20,12 +19,7 @@ export function useSimulacaoLocal() {
 
   useEffect(() => {
     const id = setInterval(() => {
-      const timestamp = Math.floor(Date.now() / 1000);
-      const novas = MAQUINAS.map((nome) => {
-        const { estado, leitura } = proximaLeitura(nome, estados.current[nome], timestamp);
-        estados.current[nome] = estado;
-        return { ...leitura, id: `local-${nome}-${timestamp}` };
-      });
+      const novas = proximaRodada(estados.current, Math.floor(Date.now() / 1000));
       const recebidoEm = Date.now();
       setLeituras((anteriores) => mesclarLeituras(anteriores, novas));
       setStatusAtual((anterior) => {

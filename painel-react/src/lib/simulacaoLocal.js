@@ -62,19 +62,26 @@ export function proximaLeitura(nome, estado, timestamp, sorteio = Math.random) {
 }
 
 /**
+ * Uma rodada: a próxima leitura das três máquinas, no mesmo instante. Atualiza `estados` (um objeto por máquina) no lugar
+ * e devolve as leituras, já com `id` local.
+ */
+export function proximaRodada(estados, timestamp, sorteio = Math.random) {
+  return MAQUINAS.map((nome) => {
+    const { estado, leitura } = proximaLeitura(nome, estados[nome], timestamp, sorteio);
+    estados[nome] = estado;
+    return { ...leitura, id: `local-${nome}-${timestamp}` };
+  });
+}
+
+/**
  * Gera `quantas` rodadas de leituras terminando em `agoraS` (segundos), para o gráfico já nascer com histórico.
- * Devolve as leituras (com `id` local) e o estado final de cada máquina.
+ * Devolve as leituras e o estado final de cada máquina.
  */
 export function gerarHistorico(agoraS, quantas, sorteio = Math.random) {
   const estados = Object.fromEntries(MAQUINAS.map((nome) => [nome, criarMaquina(nome)]));
   const leituras = [];
   for (let i = quantas - 1; i >= 0; i -= 1) {
-    const timestamp = agoraS - i * INTERVALO_SIMULACAO_S;
-    for (const nome of MAQUINAS) {
-      const { estado, leitura } = proximaLeitura(nome, estados[nome], timestamp, sorteio);
-      estados[nome] = estado;
-      leituras.push({ ...leitura, id: `local-${nome}-${timestamp}` });
-    }
+    leituras.push(...proximaRodada(estados, agoraS - i * INTERVALO_SIMULACAO_S, sorteio));
   }
   return { leituras, estados };
 }
