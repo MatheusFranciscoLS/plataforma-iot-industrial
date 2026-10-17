@@ -293,7 +293,7 @@ describe('Login', () => {
     await userEvent.setup().click(screen.getByRole('button', { name: 'Ver o painel de demonstração' }));
 
     await waitFor(() => expect(onEntrar).toHaveBeenCalledWith('tok.demo.x'));
-    expect(JSON.parse(fetchFalso.mock.calls[0][1].body)).toEqual(ACESSO_DEMO);
+    expect(JSON.parse(fetchFalso.mock.calls.find(([url]) => String(url).includes("/api/auth/login"))[1].body)).toEqual(ACESSO_DEMO);
   });
 
   it('se a demonstração falhar (servidor fora do ar), mostra o erro e deixa tentar de novo', async () => {

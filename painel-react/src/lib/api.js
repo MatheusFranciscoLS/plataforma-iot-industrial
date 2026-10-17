@@ -4,6 +4,21 @@ export const API_NODE = import.meta.env.VITE_API_NODE ?? 'http://localhost:3000'
 
 export class SessaoInvalidaError extends Error {}
 
+/**
+ * Acorda a API e o gateway, que na hospedagem gratuita dormem sem visitas e levam alguns minutos para subir.
+ * É chamado quando a tela de login abre: enquanto a pessoa lê a página, os servidores já estão acordando.
+ * Não espera resposta e ignora qualquer erro (sem rede, servidor fora do ar...).
+ */
+export function aquecerServidores() {
+  for (const url of [`${API_JAVA}/actuator/health`, `${API_NODE}/saude`]) {
+    try {
+      fetch(url, { mode: 'no-cors', cache: 'no-store' }).catch(() => {});
+    } catch {
+      // sem fetch ou sem rede: o login normal continua funcionando
+    }
+  }
+}
+
 /** Erro da API com um código ('rede', 'credenciais' ou 'servidor'); a tela escolhe o texto no idioma certo. */
 export class ErroApi extends Error {
   constructor(codigo) {
