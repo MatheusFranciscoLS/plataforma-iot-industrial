@@ -1,0 +1,32 @@
+name: Modo candidatura (manter a API acordada)
+
+# A hospedagem gratuita dorme a API sem visitas, e acordar leva mais de dois minutos. Este modo chama a API e o
+# gateway a cada 10 minutos para eles ficarem acordados enquanto você divulga o projeto (envia currículo, por exemplo).
+# Fica DESLIGADO por padrão, para não gastar as horas gratuitas da hospedagem à toa.
+# Para ligar:  GitHub > Settings > Secrets and variables > Actions > Variables > New repository variable
+#              nome MANTER_ACORDADO, valor true.   Para desligar: apague a variável ou troque o valor.
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  manter-acordado:
+    name: Chamar a API e o gateway
+    # Com a variável desligada o trabalho é pulado: não gasta nada.
+    if: ${{ vars.MANTER_ACORDADO == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+
+    steps:
+      - name: Chamar a saúde da API e do gateway
+        # Se estiverem dormindo, a primeira chamada acorda e as tentativas esperam a subida.
+        run: |
+          curl --fail --silent --show-error --retry 6 --retry-delay 30 --retry-all-errors --max-time 120 \
+            https://iot-core-api.onrender.com/actuator/health
+          echo
+          curl --silent --show-error --retry 3 --retry-delay 10 --max-time 60 \
+            https://iot-gateway-node.onrender.com/saude || true
