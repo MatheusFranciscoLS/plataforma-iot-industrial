@@ -1,35 +1,10 @@
 import { CartesianGrid, Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { formatarNumero, LIMITE_TEMPERATURA, MAQUINAS } from '@/lib/limites';
-
-// Cada máquina tem uma cor cinza-azulada e um tipo de traço, para dar para separar as linhas sem depender só da cor.
-const SERIES = [
-  { chave: MAQUINAS[0], cor: 'rgb(var(--serie-1))', traco: undefined },
-  { chave: MAQUINAS[1], cor: 'rgb(var(--serie-2))', traco: '8 4' },
-  { chave: MAQUINAS[2], cor: 'rgb(var(--serie-3))', traco: '2 3' },
-];
+import { useState } from 'react';
+import { formatarNumero, LIMITE_TEMPERATURA } from '@/lib/limites';
+import { SERIES } from '@/lib/series';
+import ControlesDoGrafico from './ControlesDoGrafico';
 
 const hora = (timestamp) => new Date(timestamp * 1000).toLocaleTimeString('pt-BR');
-
-function Legenda() {
-  return (
-    <ul className="flex flex-wrap gap-x-6 gap-y-1 text-sm">
-      {SERIES.map(({ chave, cor, traco }) => (
-        <li key={chave} className="flex items-center gap-2">
-          <svg aria-hidden="true" width="28" height="8" viewBox="0 0 28 8">
-            <line x1="0" x2="28" y1="4" y2="4" stroke={cor} strokeWidth="3" strokeDasharray={traco} />
-          </svg>
-          {chave}
-        </li>
-      ))}
-      <li className="flex items-center gap-2 text-alarme">
-        <svg aria-hidden="true" width="28" height="8" viewBox="0 0 28 8">
-          <line x1="0" x2="28" y1="4" y2="4" className="stroke-alarme" strokeWidth="2" strokeDasharray="6 4" />
-        </svg>
-        Limite de {LIMITE_TEMPERATURA} °C
-      </li>
-    </ul>
-  );
-}
 
 function BalaoDoGrafico({ active, payload, label }) {
   if (!active || !payload?.length) return null;
@@ -46,8 +21,17 @@ function BalaoDoGrafico({ active, payload, label }) {
   );
 }
 
-export default function GraficoTemperatura({ historico }) {
+export default function GraficoTemperatura({ historico, pontos, onPontos }) {
   const vazio = historico.length === 0;
+  const [ocultas, setOcultas] = useState(() => new Set());
+
+  const alternar = (maquina) =>
+    setOcultas((atual) => {
+      const novo = new Set(atual);
+      if (novo.has(maquina)) novo.delete(maquina);
+      else novo.add(maquina);
+      return novo;
+    });
 
   return (
     <section aria-labelledby="titulo-grafico" aria-describedby="descricao-grafico" className="mt-6 rounded border border-linha bg-painel p-5">
@@ -55,7 +39,7 @@ export default function GraficoTemperatura({ historico }) {
         <h2 id="titulo-grafico" className="font-condensada text-2xl font-semibold">
           Temperatura das máquinas
         </h2>
-        <Legenda />
+        <ControlesDoGrafico ocultas={ocultas} onAlternar={alternar} pontos={pontos} onPontos={onPontos} />
       </div>
 
       <p id="descricao-grafico" className="sr-only">
@@ -103,6 +87,7 @@ export default function GraficoTemperatura({ historico }) {
                 dot={false}
                 activeDot={{ r: 5 }}
                 isAnimationActive={false}
+                hide={ocultas.has(chave)}
               />
             ))}
           </LineChart>

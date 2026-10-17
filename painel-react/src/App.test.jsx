@@ -14,7 +14,9 @@ const socketFalso = vi.hoisted(() => {
 vi.mock('socket.io-client', () => ({ io: () => socketFalso }));
 
 // O gráfico (Recharts) precisa de medidas reais de tela, que o jsdom não tem.
-vi.mock('@/components/GraficoTemperatura', () => ({ default: () => <p>gráfico</p> }));
+vi.mock('@/components/GraficoTemperatura', () => ({
+  default: ({ onPontos }) => <button onClick={() => onPontos(60)}>mais pontos</button>,
+}));
 
 import App from './App';
 
@@ -74,6 +76,21 @@ describe('App', () => {
     expect(screen.getByRole('status', { name: 'Resumo da fábrica' })).toHaveTextContent('1 máquina em estado crítico');
     expect(screen.getByRole('article', { name: 'MAQ-01: Crítica' })).toBeInTheDocument();
     expect(screen.getByRole('article', { name: 'MAQ-02: Normal' })).toBeInTheDocument();
+  });
+
+  it('pedir mais pontos no gráfico busca um histórico maior e não reconecta o tempo real', async () => {
+    localStorage.setItem('token', tokenValido());
+    const fetchFalso = vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => [] });
+    vi.stubGlobal('fetch', fetchFalso);
+    render(<App />);
+
+    const botao = await screen.findByRole('button', { name: 'mais pontos' });
+    expect(fetchFalso.mock.calls[0][0]).toContain('/api/sensores?limite=60'); // 20 pontos x 3 máquinas
+
+    act(() => botao.click());
+
+    await waitFor(() => expect(fetchFalso.mock.calls.at(-1)[0]).toContain('/api/sensores?limite=180')); // 60 x 3
+    expect(socketFalso.disconnect).not.toHaveBeenCalled();
   });
 
   it('queda de conexão aparece como "Reconectando"', async () => {

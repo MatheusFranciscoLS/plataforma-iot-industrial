@@ -1,8 +1,8 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAgora } from '@/hooks/useAgora';
 import { useTelemetria } from '@/hooks/useTelemetria';
-import { serieDaMaquina } from '@/lib/historico';
+import { MAX_PONTOS, serieDaMaquina } from '@/lib/historico';
 import { avaliarMaquina, LIMITE_TEMPERATURA, LIMITE_VIBRACAO, formatarNumero, MAQUINAS, resumirFabrica } from '@/lib/limites';
 import Cabecalho from './Cabecalho';
 import LinhaMaquina from './LinhaMaquina';
@@ -12,7 +12,8 @@ import ResumoFabrica from './ResumoFabrica';
 const GraficoTemperatura = lazy(() => import('./GraficoTemperatura'));
 
 export default function Painel({ token, tema, onAlternarTema, onSair, onSessaoInvalida }) {
-  const { historico, statusAtual, conexao, erroHistorico } = useTelemetria(token, onSessaoInvalida);
+  const [pontos, setPontos] = useState(MAX_PONTOS);
+  const { historico, statusAtual, conexao, erroHistorico } = useTelemetria(token, onSessaoInvalida, pontos);
   const agora = useAgora();
 
   const avaliacoes = MAQUINAS.map((nome) => avaliarMaquina(statusAtual[nome], agora));
@@ -50,7 +51,7 @@ export default function Painel({ token, tema, onAlternarTema, onSair, onSessaoIn
         )}
 
         <Suspense fallback={<Skeleton className="mt-6 h-96 w-full rounded bg-linha/60" />}>
-          <GraficoTemperatura historico={historico} />
+          <GraficoTemperatura historico={historico} pontos={pontos} onPontos={setPontos} />
         </Suspense>
       </main>
 

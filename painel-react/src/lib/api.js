@@ -25,8 +25,9 @@ export async function fazerLogin(usuario, senha) {
 }
 
 /** Busca as últimas leituras. Lança SessaoInvalidaError se o token não vale mais. */
-export async function buscarHistorico(token) {
-  const resposta = await fetch(`${API_JAVA}/api/sensores`, {
+export async function buscarHistorico(token, limite) {
+  const consulta = limite ? `?limite=${limite}` : '';
+  const resposta = await fetch(`${API_JAVA}/api/sensores${consulta}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
 

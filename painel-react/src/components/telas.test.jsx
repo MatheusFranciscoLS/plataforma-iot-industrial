@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from 'vitest';
 import Login from './Login';
 import LinhaMaquina from './LinhaMaquina';
 import ResumoFabrica from './ResumoFabrica';
+import ControlesDoGrafico from './ControlesDoGrafico';
 import { avaliarMaquina, resumirFabrica } from '@/lib/limites';
 
 const AGORA = 1_000_000;
@@ -83,6 +84,36 @@ describe('ResumoFabrica', () => {
 
     expect(screen.getByRole('status', { name: 'Resumo da fábrica' })).toHaveTextContent('1 máquina em estado crítico');
     expect(screen.getByRole('status', { name: 'Resumo da fábrica' })).toHaveTextContent('MAQ-01');
+  });
+});
+
+describe('ControlesDoGrafico', () => {
+  it('cada máquina é um botão que mostra ou esconde a linha, e diz se está ligada', async () => {
+    const onAlternar = vi.fn();
+    render(<ControlesDoGrafico ocultas={new Set(['MAQ-02'])} onAlternar={onAlternar} pontos={20} onPontos={vi.fn()} />);
+
+    expect(screen.getByRole('button', { name: 'MAQ-01' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'MAQ-02' })).toHaveAttribute('aria-pressed', 'false');
+
+    await userEvent.setup().click(screen.getByRole('button', { name: 'MAQ-03' }));
+    expect(onAlternar).toHaveBeenCalledWith('MAQ-03');
+  });
+
+  it('mostra as opções de pontos, marca a atual e avisa quando outra é escolhida', async () => {
+    const onPontos = vi.fn();
+    render(<ControlesDoGrafico ocultas={new Set()} onAlternar={vi.fn()} pontos={20} onPontos={onPontos} />);
+
+    expect(screen.getByRole('button', { name: '20' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: '60' })).toHaveAttribute('aria-pressed', 'false');
+
+    await userEvent.setup().click(screen.getByRole('button', { name: '160' }));
+    expect(onPontos).toHaveBeenCalledWith(160);
+  });
+
+  it('a legenda sempre lembra o limite de alerta', () => {
+    render(<ControlesDoGrafico ocultas={new Set()} onAlternar={vi.fn()} pontos={20} onPontos={vi.fn()} />);
+
+    expect(screen.getByText('Limite de 95 °C')).toBeInTheDocument();
   });
 });
 
