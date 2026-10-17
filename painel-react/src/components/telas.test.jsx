@@ -3,6 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import Login from './Login';
+import { ACESSO_DEMO } from '@/lib/demo';
 import LinhaMaquina from './LinhaMaquina';
 import ResumoFabrica from './ResumoFabrica';
 import { avaliarMaquina, resumirFabrica } from '@/lib/limites';
@@ -124,6 +125,38 @@ describe('Login', () => {
     await preencherEEnviar(userEvent.setup());
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Não foi possível falar com o servidor');
+  });
+
+  it('o botão de demonstração entra com o acesso de demonstração, sem digitar nada', async () => {
+    const fetchFalso = vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({ token: 'tok.demo.x' }) });
+    vi.stubGlobal('fetch', fetchFalso);
+    const onEntrar = vi.fn();
+    render(<Login aviso="" onEntrar={onEntrar} />);
+
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Ver o painel de demonstração' }));
+
+    await waitFor(() => expect(onEntrar).toHaveBeenCalledWith('tok.demo.x'));
+    expect(JSON.parse(fetchFalso.mock.calls[0][1].body)).toEqual(ACESSO_DEMO);
+  });
+
+  it('se a demonstração falhar (servidor fora do ar), mostra o erro e deixa tentar de novo', async () => {
+    mockarFalhaDeRede();
+    render(<Login aviso="" onEntrar={vi.fn()} />);
+
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Ver o painel de demonstração' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Não foi possível falar com o servidor');
+    expect(screen.getByRole('button', { name: 'Ver o painel de demonstração' })).toBeEnabled();
+  });
+
+  it('a página explica o caminho da leitura, do sensor até o painel', () => {
+    render(<Login aviso="" onEntrar={vi.fn()} />);
+
+    const etapas = screen.getByRole('heading', { name: 'Como uma leitura chega até a tela' }).parentElement;
+    for (const nome of ['Sensores', 'API', 'Fila', 'Gateway', 'Painel']) {
+      expect(etapas).toHaveTextContent(nome);
+    }
+    expect(screen.getByText('Os dados deste demo são simulados.')).toBeInTheDocument();
   });
 
   it('mostra o aviso de sessão terminada vindo do app', () => {
