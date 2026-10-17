@@ -29,11 +29,13 @@ public class AlertaService {
     private final Map<String, Boolean> acima = new ConcurrentHashMap<>();
 
     private final MeterRegistry metricas;
+    private final NotificadorDeAlertas notificador;
 
-    public AlertaService(AlertaRepository repository, LimiteService limites, MeterRegistry metricas) {
+    public AlertaService(AlertaRepository repository, LimiteService limites, MeterRegistry metricas, NotificadorDeAlertas notificador) {
         this.repository = repository;
         this.limites = limites;
         this.metricas = metricas;
+        this.notificador = notificador;
     }
 
     public void avaliar(RegistroSensor leitura) {
@@ -49,9 +51,10 @@ public class AlertaService {
         Boolean estavaAcima = acima.put(leitura.getIdMaquina() + "|" + tipo, estaAcima);
 
         if (estaAcima && !Boolean.TRUE.equals(estavaAcima)) {
-            repository.save(new Alerta(leitura.getIdMaquina(), leitura.getTimestamp(), tipo, valor, limite));
+            Alerta alerta = repository.save(new Alerta(leitura.getIdMaquina(), leitura.getTimestamp(), tipo, valor, limite));
             log.info("Alerta: {} passou do limite de {} ({} > {})", leitura.getIdMaquina(), tipo, valor, limite);
             metricas.counter("iot.alertas.gerados", "tipo", tipo.name()).increment();
+            notificador.notificar(alerta); // assíncrono e sem lançar erro: o chat fora do ar não atrapalha a leitura
         }
     }
 }
