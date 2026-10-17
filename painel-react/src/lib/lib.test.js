@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { adicionarLeitura, agruparHistorico, MAX_PONTOS, mesclarLeituras, serieDaMaquina, ultimasLeituras } from './historico';
-import { avaliarMaquina, resumirFabrica, SEM_SINAL_APOS_S } from './limites';
+import { gerarCsv } from './csv';
+import { alertasRecentes, avaliarMaquina, motivosDaLeitura, resumirFabrica, SEM_SINAL_APOS_S } from './limites';
 import { lerExpiracao, tokenExpirado } from './token';
 
 const leitura = (extra = {}) => ({
@@ -53,6 +54,25 @@ describe('avaliarMaquina', () => {
   });
 });
 
+describe('alertas', () => {
+  it('motivosDaLeitura lista só o que passou do limite', () => {
+    expect(motivosDaLeitura(leitura())).toEqual([]);
+    expect(motivosDaLeitura(leitura({ temperaturaMotor: 96 }))).toEqual(['Temperatura acima de 95 °C']);
+    expect(motivosDaLeitura(leitura({ temperaturaMotor: 96, vibracao: 5.1 }))).toHaveLength(2);
+  });
+
+  it('alertasRecentes ordena do mais novo para o mais antigo e respeita o máximo', () => {
+    const leituras = [];
+    for (let t = 1; t <= 12; t++) leituras.push(leitura({ timestamp: t, temperaturaMotor: 99 }));
+    leituras.push(leitura({ timestamp: 50 })); // normal
+
+    const alertas = alertasRecentes(leituras, 5);
+
+    expect(alertas).toHaveLength(5);
+    expect(alertas.map((a) => a.leitura.timestamp)).toEqual([12, 11, 10, 9, 8]);
+  });
+});
+
 describe('resumirFabrica', () => {
   const av = (...estados) => estados.map((estado) => ({ estado, motivos: [] }));
 
@@ -81,7 +101,34 @@ describe('resumirFabrica', () => {
   });
 });
 
+describe('csv', () => {
+  it('gera o cabeçalho e uma linha por leitura, da mais antiga para a mais nova', () => {
+    const csv = gerarCsv([
+      { idMaquina: 'MAQ-02', timestamp: 1_700_000_010, temperaturaMotor: 71.5, vibracao: 2.25, rpm: 1800 },
+      { idMaquina: 'MAQ-01', timestamp: 1_700_000_000, temperaturaMotor: 99, vibracao: 5.5, rpm: 2000 },
+    ]);
+
+    expect(csv.split('\n')).toEqual([
+      'momento,maquina,temperatura_c,vibracao_mm_s,rpm',
+      '2023-11-14T22:13:20.000Z,MAQ-01,99,5.5,2000',
+      '2023-11-14T22:13:30.000Z,MAQ-02,71.5,2.25,1800',
+      '',
+    ]);
+  });
+});
+
 describe('historico', () => {
+  it('agrupa pelo campo pedido (vibração ou rotação), não só pela temperatura', () => {
+    const registros = [
+      { idMaquina: 'MAQ-01', timestamp: 10, temperaturaMotor: 80, vibracao: 2.5, rpm: 1900 },
+      { idMaquina: 'MAQ-02', timestamp: 10, temperaturaMotor: 70, vibracao: 3.5, rpm: 2100 },
+    ];
+
+    expect(agruparHistorico(registros, 20, 'vibracao')).toEqual([{ timestamp: 10, 'MAQ-01': 2.5, 'MAQ-02': 3.5 }]);
+    expect(agruparHistorico(registros, 20, 'rpm')).toEqual([{ timestamp: 10, 'MAQ-01': 1900, 'MAQ-02': 2100 }]);
+    expect(agruparHistorico(registros)).toEqual([{ timestamp: 10, 'MAQ-01': 80, 'MAQ-02': 70 }]);
+  });
+
   it('agrupa leituras do mesmo instante, ordena e limita a 20 pontos', () => {
     const registros = [];
     for (let t = 1; t <= 25; t++) {

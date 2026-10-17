@@ -1,12 +1,15 @@
 import { CartesianGrid, Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { useState } from 'react';
-import { formatarNumero, LIMITE_TEMPERATURA } from '@/lib/limites';
+import { Download } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { baixarArquivo, gerarCsv } from '@/lib/csv';
+import { formatarNumero } from '@/lib/limites';
 import { SERIES } from '@/lib/series';
 import ControlesDoGrafico from './ControlesDoGrafico';
 
 const hora = (timestamp) => new Date(timestamp * 1000).toLocaleTimeString('pt-BR');
 
-function BalaoDoGrafico({ active, payload, label }) {
+function BalaoDoGrafico({ active, payload, label, metrica }) {
   if (!active || !payload?.length) return null;
   return (
     <div className="rounded border border-linha bg-painel px-3 py-2 text-sm shadow-md">
@@ -14,16 +17,20 @@ function BalaoDoGrafico({ active, payload, label }) {
       {payload.map((p) => (
         <p key={p.dataKey} className="flex justify-between gap-4">
           <span className="text-suave">{p.dataKey}</span>
-          <span className={`numero ${p.value > LIMITE_TEMPERATURA ? 'text-alarme' : ''}`}>{formatarNumero(p.value, 1, 1)} °C</span>
+          <span className={`numero ${metrica.limite !== null && p.value > metrica.limite ? 'text-alarme' : ''}`}>
+            {formatarNumero(p.value, metrica.casas, metrica.casas)} {metrica.unidade}
+          </span>
         </p>
       ))}
     </div>
   );
 }
 
-export default function GraficoTemperatura({ historico, pontos, onPontos }) {
+/** Gráfico de linhas de uma grandeza (temperatura, vibração ou rotação), uma linha por máquina. */
+export default function GraficoTemperatura({ historico, leituras, metrica, onMetrica, pontos, onPontos }) {
   const vazio = historico.length === 0;
   const [ocultas, setOcultas] = useState(() => new Set());
+  const { limite } = metrica;
 
   const alternar = (maquina) =>
     setOcultas((atual) => {
@@ -33,18 +40,49 @@ export default function GraficoTemperatura({ historico, pontos, onPontos }) {
       return novo;
     });
 
+  // Com limite de alerta, o eixo sempre inclui a linha do limite; sem limite (rotação), segue só os dados.
+  const { margem } = metrica;
+  const arredondar = (v) => Math.round(v * 10) / 10;
+  const dominio =
+    limite === null
+      ? [(min) => Math.max(0, Math.floor(min - margem)), (max) => Math.ceil(max + margem)]
+      : [
+          (min) => Math.max(0, arredondar(Math.min(min, limite) - margem)),
+          (max) => arredondar(Math.max(max, limite) + margem),
+        ];
+
   return (
     <section aria-labelledby="titulo-grafico" aria-describedby="descricao-grafico" className="mt-6 rounded border border-linha bg-painel p-5">
-      <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2">
-        <h2 id="titulo-grafico" className="font-condensada text-2xl font-semibold">
-          Temperatura das máquinas
-        </h2>
-        <ControlesDoGrafico ocultas={ocultas} onAlternar={alternar} pontos={pontos} onPontos={onPontos} />
+      <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
+        <div>
+          <h2 id="titulo-grafico" className="font-condensada text-2xl font-semibold">
+            {metrica.rotulo} das máquinas
+          </h2>
+          <Button
+            variant="outline"
+            size="sm"
+            className="mt-2"
+            disabled={leituras.length === 0}
+            onClick={() => baixarArquivo('leituras.csv', gerarCsv(leituras))}
+          >
+            <Download aria-hidden="true" />
+            Baixar leituras (CSV)
+          </Button>
+        </div>
+        <ControlesDoGrafico
+          ocultas={ocultas}
+          onAlternar={alternar}
+          pontos={pontos}
+          onPontos={onPontos}
+          metrica={metrica}
+          onMetrica={onMetrica}
+        />
       </div>
 
       <p id="descricao-grafico" className="sr-only">
-        Gráfico de linhas com a temperatura de cada máquina nos últimos instantes e a linha do limite de {LIMITE_TEMPERATURA} °C. Os valores
-        atuais estão nos cartões das máquinas.
+        Gráfico de linhas com {metrica.rotulo.toLowerCase()} de cada máquina nos últimos instantes
+        {limite !== null ? ` e a linha do limite de ${formatarNumero(limite, metrica.casasLimite, metrica.casasLimite)} ${metrica.unidade}` : ''}. Os valores atuais estão nos cartões
+        das máquinas.
       </p>
 
       <div className="relative mt-4 h-72 w-full md:h-96">
@@ -67,14 +105,14 @@ export default function GraficoTemperatura({ historico, pontos, onPontos }) {
               tick={{ fill: 'rgb(var(--suave))', fontSize: 12 }}
             />
             <YAxis
-              domain={[(min) => Math.floor(Math.min(min, LIMITE_TEMPERATURA) - 5), (max) => Math.ceil(Math.max(max, LIMITE_TEMPERATURA) + 5)]}
-              tickFormatter={(v) => `${v}°`}
-              width={44}
+              domain={dominio}
+              tickFormatter={(v) => formatarNumero(v, metrica.casasEixo)}
+              width={metrica.id === 'rpm' ? 52 : 44}
               stroke="rgb(var(--suave))"
               tick={{ fill: 'rgb(var(--suave))', fontSize: 12 }}
             />
-            <ReferenceLine y={LIMITE_TEMPERATURA} stroke="rgb(var(--alarme))" strokeDasharray="6 4" strokeWidth={1.5} />
-            <Tooltip content={<BalaoDoGrafico />} cursor={{ stroke: 'rgb(var(--suave))', strokeDasharray: '3 3' }} />
+            {limite !== null && <ReferenceLine y={limite} stroke="rgb(var(--alarme))" strokeDasharray="6 4" strokeWidth={1.5} />}
+            <Tooltip content={<BalaoDoGrafico metrica={metrica} />} cursor={{ stroke: 'rgb(var(--suave))', strokeDasharray: '3 3' }} />
             {SERIES.map(({ chave, cor, traco }) => (
               <Line
                 key={chave}

@@ -1,9 +1,11 @@
-import { lazy, Suspense, useState } from 'react';
+import { lazy, Suspense, useMemo, useState } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAgora } from '@/hooks/useAgora';
 import { useTelemetria } from '@/hooks/useTelemetria';
-import { MAX_PONTOS, serieDaMaquina } from '@/lib/historico';
+import { agruparHistorico, MAX_PONTOS, serieDaMaquina } from '@/lib/historico';
+import { METRICA_PADRAO } from '@/lib/metricas';
 import { avaliarMaquina, LIMITE_TEMPERATURA, LIMITE_VIBRACAO, formatarNumero, MAQUINAS, resumirFabrica } from '@/lib/limites';
+import AlertasRecentes from './AlertasRecentes';
 import Cabecalho from './Cabecalho';
 import LinhaMaquina from './LinhaMaquina';
 import ResumoFabrica from './ResumoFabrica';
@@ -13,7 +15,9 @@ const GraficoTemperatura = lazy(() => import('./GraficoTemperatura'));
 
 export default function Painel({ token, tema, onAlternarTema, onSair, onSessaoInvalida }) {
   const [pontos, setPontos] = useState(MAX_PONTOS);
-  const { historico, statusAtual, conexao, erroHistorico } = useTelemetria(token, onSessaoInvalida, pontos);
+  const [metrica, setMetrica] = useState(METRICA_PADRAO);
+  const { historico, leituras, statusAtual, conexao, erroHistorico } = useTelemetria(token, onSessaoInvalida, pontos);
+  const historicoDoGrafico = useMemo(() => agruparHistorico(leituras, pontos, metrica.id), [leituras, pontos, metrica]);
   const agora = useAgora();
 
   const avaliacoes = MAQUINAS.map((nome) => avaliarMaquina(statusAtual[nome], agora));
@@ -51,8 +55,17 @@ export default function Painel({ token, tema, onAlternarTema, onSair, onSessaoIn
         )}
 
         <Suspense fallback={<Skeleton className="mt-6 h-96 w-full rounded bg-linha/60" />}>
-          <GraficoTemperatura historico={historico} pontos={pontos} onPontos={setPontos} />
+          <GraficoTemperatura
+            historico={historicoDoGrafico}
+            leituras={leituras}
+            metrica={metrica}
+            onMetrica={setMetrica}
+            pontos={pontos}
+            onPontos={setPontos}
+          />
         </Suspense>
+
+        <AlertasRecentes leituras={leituras} />
       </main>
 
       <footer className="mt-8 flex flex-wrap justify-between gap-x-6 gap-y-1 border-t border-linha pt-4 text-sm text-suave">
