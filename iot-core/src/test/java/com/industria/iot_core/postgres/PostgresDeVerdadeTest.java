@@ -48,7 +48,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         "spring.jpa.hibernate.ddl-auto=validate",
         "spring.jpa.database-platform=org.hibernate.dialect.PostgreSQLDialect",
         "spring.datasource.driver-class-name=org.postgresql.Driver",
-        "demo.retencao-horas=1"
+        "demo.retencao-horas=1",
+        "serie.cache-segundos=0"
 })
 @AutoConfigureMockMvc
 class PostgresDeVerdadeTest {
@@ -168,6 +169,37 @@ class PostgresDeVerdadeTest {
                 .andExpect(jsonPath("$[0].timestamp", is(2004)));
         mockMvc.perform(get("/api/sensores").header("Authorization", como(Perfil.LEITURA)))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.length()").isNumber());
+    }
+
+    @Test
+    void serieEResumoPorPeriodoAgrupamNoPostgresComDivisaoInteira() throws Exception {
+        // O agrupamento por faixa usa divisão inteira do timestamp; o Postgres é quem prova que ela agrupa certo
+        long agora = Instant.now().getEpochSecond();
+        long faixaAtual = (agora / 60) * 60; // início da faixa de 1 min em que estamos
+        for (int i = 0; i < 3; i++) {
+            RegistroSensor r = new RegistroSensor();
+            r.setIdMaquina("PG-SERIE");
+            r.setTimestamp(faixaAtual - 120 + i); // as três na mesma faixa (2 min atrás)
+            r.setTemperaturaMotor(70.0 + 10 * i); // 70, 80, 90
+            r.setVibracao(1.0 + i);               // 1, 2, 3
+            r.setRpm(1000 + 500 * i);             // 1000, 1500, 2000
+            leituras.save(r);
+        }
+        alertas.save(new Alerta("PG-SERIE", agora - 30, Alerta.Tipo.TEMPERATURA, 99.0, 95.0));
+
+        mockMvc.perform(get("/api/sensores/serie?periodo=1h&maquina=PG-SERIE").header("Authorization", como(Perfil.LEITURA)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.maquinas[0].pontos", hasSize(1)))
+                .andExpect(jsonPath("$.maquinas[0].pontos[0].t", is((int) (faixaAtual - 120))))
+                .andExpect(jsonPath("$.maquinas[0].pontos[0].leituras", is(3)))
+                .andExpect(jsonPath("$.maquinas[0].pontos[0].temperatura", is(80.0)))
+                .andExpect(jsonPath("$.maquinas[0].pontos[0].temperaturaMax", is(90.0)))
+                .andExpect(jsonPath("$.maquinas[0].pontos[0].rpm", is(1500.0)));
+
+        mockMvc.perform(get("/api/sensores/resumo?periodo=1h").header("Authorization", como(Perfil.LEITURA)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.maquinas[?(@.idMaquina=='PG-SERIE')].leituras", org.hamcrest.Matchers.contains(3)))
+                .andExpect(jsonPath("$.maquinas[?(@.idMaquina=='PG-SERIE')].alertasTemperatura", org.hamcrest.Matchers.contains(1)));
     }
 
     @Test
