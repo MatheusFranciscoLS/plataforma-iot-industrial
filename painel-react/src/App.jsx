@@ -2,27 +2,28 @@ import { useCallback, useEffect, useState } from 'react';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import Login from '@/components/Login';
 import Painel from '@/components/Painel';
+import { useIdioma } from '@/i18n/idioma-contexto';
+import ProvedorDeIdioma from '@/i18n/ProvedorDeIdioma';
 import { useTema } from '@/hooks/useTema';
 import { lerExpiracao, lerTokenSalvo, salvarToken } from '@/lib/token';
 
-const AVISO_SESSAO = 'Sua sessão terminou. Entre de novo para continuar.';
-
-export default function App() {
+function Aplicacao() {
+  const { t } = useIdioma();
   const [token, setToken] = useState(lerTokenSalvo);
-  const [aviso, setAviso] = useState('');
+  const [sessaoTerminou, setSessaoTerminou] = useState(false);
   const { tema, alternar } = useTema();
 
-  const sair = useCallback((mensagem = '') => {
+  const sair = useCallback((sessaoVenceu = false) => {
     salvarToken(null);
     setToken(null);
-    setAviso(mensagem);
+    setSessaoTerminou(sessaoVenceu);
   }, []);
 
-  const sessaoInvalida = useCallback(() => sair(AVISO_SESSAO), [sair]);
+  const sessaoInvalida = useCallback(() => sair(true), [sair]);
 
   const entrar = (novoToken) => {
     salvarToken(novoToken);
-    setAviso('');
+    setSessaoTerminou(false);
     setToken(novoToken);
   };
 
@@ -40,8 +41,16 @@ export default function App() {
       {token ? (
         <Painel token={token} tema={tema} onAlternarTema={alternar} onSair={() => sair()} onSessaoInvalida={sessaoInvalida} />
       ) : (
-        <Login aviso={aviso} onEntrar={entrar} />
+        <Login aviso={sessaoTerminou ? t('aviso.sessao') : ''} onEntrar={entrar} />
       )}
     </TooltipProvider>
+  );
+}
+
+export default function App() {
+  return (
+    <ProvedorDeIdioma>
+      <Aplicacao />
+    </ProvedorDeIdioma>
   );
 }

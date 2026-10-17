@@ -4,7 +4,15 @@ export const API_NODE = import.meta.env.VITE_API_NODE ?? 'http://localhost:3000'
 
 export class SessaoInvalidaError extends Error {}
 
-/** Faz o login. Devolve o token, ou lança um Error com uma mensagem pronta para mostrar na tela. */
+/** Erro da API com um código ('rede', 'credenciais' ou 'servidor'); a tela escolhe o texto no idioma certo. */
+export class ErroApi extends Error {
+  constructor(codigo) {
+    super(codigo);
+    this.codigo = codigo;
+  }
+}
+
+/** Faz o login. Devolve o token, ou lança um ErroApi com o código do problema. */
 export async function fazerLogin(usuario, senha) {
   let resposta;
   try {
@@ -14,11 +22,11 @@ export async function fazerLogin(usuario, senha) {
       body: JSON.stringify({ usuario, senha }),
     });
   } catch {
-    throw new Error('Não foi possível falar com o servidor. Confira a conexão e tente de novo.');
+    throw new ErroApi('rede');
   }
 
-  if (resposta.status === 401) throw new Error('Usuário ou senha incorretos.');
-  if (!resposta.ok) throw new Error('O servidor não conseguiu fazer o login. Tente de novo em instantes.');
+  if (resposta.status === 401) throw new ErroApi('credenciais');
+  if (!resposta.ok) throw new ErroApi('servidor');
 
   const { token } = await resposta.json();
   return token;

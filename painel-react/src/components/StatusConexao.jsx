@@ -1,17 +1,20 @@
 import { Loader2, RefreshCw, WifiOff } from 'lucide-react';
+import { useIdioma } from '@/i18n/idioma-contexto';
 
-const TEXTOS = {
-  'ao-vivo': 'Ao vivo',
-  conectando: 'Conectando…',
-  reconectando: 'Reconectando…',
-  'por-consulta': 'Atualizando por consulta',
+const CHAVES = {
+  'ao-vivo': 'conexao.aoVivo',
+  conectando: 'conexao.conectando',
+  reconectando: 'conexao.reconectando',
+  'por-consulta': 'conexao.porConsulta',
 };
 
 export default function StatusConexao({ conexao }) {
+  const { t } = useIdioma();
+
   return (
     <p
       role="status"
-      title={conexao === 'por-consulta' ? 'O tempo real não está chegando; o painel busca as leituras novas na API a cada 3 segundos.' : undefined}
+      title={conexao === 'por-consulta' ? t('conexao.porConsulta.dica') : undefined}
       className="flex items-center gap-2 text-sm font-medium"
     >
       {conexao === 'ao-vivo' && (
@@ -23,7 +26,7 @@ export default function StatusConexao({ conexao }) {
       {conexao === 'conectando' && <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin text-suave" />}
       {conexao === 'por-consulta' && <RefreshCw aria-hidden="true" className="h-4 w-4 text-suave" />}
       {conexao === 'reconectando' && <WifiOff aria-hidden="true" className="h-4 w-4 text-alarme" />}
-      <span className={conexao === 'reconectando' ? 'text-alarme' : undefined}>{TEXTOS[conexao]}</span>
+      <span className={conexao === 'reconectando' ? 'text-alarme' : undefined}>{t(CHAVES[conexao])}</span>
     </p>
   );
 }

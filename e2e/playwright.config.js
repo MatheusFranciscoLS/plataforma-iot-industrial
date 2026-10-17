@@ -10,6 +10,7 @@ export default defineConfig({
   reporter: process.env.CI ? [['list'], ['html', { open: 'never' }]] : 'list',
   use: {
     baseURL: process.env.E2E_URL || 'http://localhost:5173',
+    locale: 'pt-BR', // o painel escolhe o idioma pelo navegador; os testes esperam os textos em português
     channel: process.env.E2E_CHANNEL || undefined,
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',

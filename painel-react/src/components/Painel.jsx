@@ -1,6 +1,7 @@
 import { lazy, Suspense, useMemo, useState } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAgora } from '@/hooks/useAgora';
+import { useIdioma } from '@/i18n/idioma-contexto';
 import { useAlertas } from '@/hooks/useAlertas';
 import { useTelemetria } from '@/hooks/useTelemetria';
 import { agruparHistorico, MAX_PONTOS, serieDaMaquina } from '@/lib/historico';
@@ -22,10 +23,12 @@ export default function Painel({ token, tema, onAlternarTema, onSair, onSessaoIn
   const { historico, leituras, statusAtual, conexao, erroHistorico } = useTelemetria(token, onSessaoInvalida, pontos);
   const historicoDoGrafico = useMemo(() => agruparHistorico(leituras, pontos, metrica.id), [leituras, pontos, metrica]);
   const { alertas, erro: erroAlertas } = useAlertas(token, onSessaoInvalida);
+  const i18n = useIdioma();
+  const { t, locale } = i18n;
   const agora = useAgora();
 
-  const avaliacoes = MAQUINAS.map((nome) => avaliarMaquina(statusAtual[nome], agora));
-  const resumo = resumirFabrica(avaliacoes);
+  const avaliacoes = MAQUINAS.map((nome) => avaliarMaquina(statusAtual[nome], agora, i18n));
+  const resumo = resumirFabrica(avaliacoes, i18n);
   const afetadas = MAQUINAS.filter((_, i) => (resumo.nivel === 'critico' ? avaliacoes[i].estado === 'critica' : avaliacoes[i].estado === 'sem-sinal' || avaliacoes[i].estado === 'sem-dados'));
 
   return (
@@ -55,7 +58,7 @@ export default function Painel({ token, tema, onAlternarTema, onSair, onSessaoIn
 
         {erroHistorico && (
           <p role="alert" className="mt-6 rounded border border-linha bg-painel px-4 py-3 text-sm">
-            Não foi possível carregar o histórico. As leituras novas continuam chegando em tempo real.
+            {t('painel.erroHistorico')}
           </p>
         )}
 
@@ -84,7 +87,7 @@ export default function Painel({ token, tema, onAlternarTema, onSair, onSessaoIn
 
       <footer className="mt-8 flex flex-wrap justify-between gap-x-6 gap-y-1 border-t border-linha pt-4 text-sm text-suave">
         <p>
-          Os dados vêm de um simulador de sensores. Alerta crítico acima de {LIMITE_TEMPERATURA} °C ou {formatarNumero(LIMITE_VIBRACAO, 1, 1)} mm/s.
+          {t('painel.rodape', { temp: LIMITE_TEMPERATURA, vib: formatarNumero(LIMITE_VIBRACAO, 1, 1, locale) })}
         </p>
         <a
           className="underline underline-offset-4 hover:text-tinta"
@@ -92,7 +95,7 @@ export default function Painel({ token, tema, onAlternarTema, onSair, onSessaoIn
           target="_blank"
           rel="noreferrer"
         >
-          Código no GitHub
+          {t('painel.codigo')}
         </a>
       </footer>
     </div>
