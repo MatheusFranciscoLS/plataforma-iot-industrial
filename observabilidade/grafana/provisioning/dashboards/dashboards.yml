@@ -1,0 +1,9 @@
+# Carrega os painéis da pasta /var/lib/grafana/dashboards (no repositório: observabilidade/grafana/dashboards).
+apiVersion: 1
+providers:
+  - name: Plataforma IoT
+    type: file
+    disableDeletion: false
+    allowUiUpdates: true
+    options:
+      path: /var/lib/grafana/dashboards

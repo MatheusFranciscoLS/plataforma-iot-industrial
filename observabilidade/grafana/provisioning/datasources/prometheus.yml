@@ -1,0 +1,10 @@
+# O Grafana já nasce ligado ao Prometheus do docker-compose.
+apiVersion: 1
+datasources:
+  - name: Prometheus
+    uid: prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    editable: false

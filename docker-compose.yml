@@ -38,6 +38,9 @@ services:
       - DB_PASS=senha_nova_123
       - RABBITMQ_URL=amqp://rabbitmq:5672
       - JWT_SECRET=${JWT_SECRET:-MinhaChaveSuperSecretaParaAIndustriaIot2026!}
+      # Token fixo para o Prometheus buscar as métricas (só vale em /actuator/prometheus e /actuator/metrics).
+      # Valor de desenvolvimento; se mudar aqui, mude também em observabilidade/prometheus.yml.
+      - METRICAS_TOKEN=${METRICAS_TOKEN:-metricas-local-dev}
     depends_on:
       postgres-db:
         condition: service_healthy
@@ -72,6 +75,39 @@ services:
     build: ./painel-react
     ports:
       - "5173:5173"
+
+  # 7 e 8. Métricas (só sobem com o perfil "observabilidade"):
+  #   docker compose --profile observabilidade up -d
+  # Prometheus: http://localhost:9090   Grafana: http://localhost:3001 (admin / admin, só para uso local)
+  prometheus:
+    image: prom/prometheus:v3.13.4
+    profiles: ["observabilidade"]
+    volumes:
+      - ./observabilidade/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9090:9090"
+    depends_on:
+      - iot-core
+    restart: on-failure
+
+  grafana:
+    image: grafana/grafana:13.0
+    profiles: ["observabilidade"]
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      # Quem abre o endereço já vê o painel, sem login (só para uso local)
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
+      - GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH=/var/lib/grafana/dashboards/plataforma-iot.json
+    volumes:
+      - ./observabilidade/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./observabilidade/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    ports:
+      - "3001:3000"
+    depends_on:
+      - prometheus
+    restart: on-failure
 
 volumes:
   postgres-dados:
