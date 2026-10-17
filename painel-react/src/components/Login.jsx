@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { fazerLogin } from '@/lib/api';
 import { ACESSO_DEMO } from '@/lib/demo';
+import AvisoServidorAcordando from './AvisoServidorAcordando';
 import FluxoDoSistema from './FluxoDoSistema';
 
 export default function Login({ aviso, onEntrar }) {
@@ -53,6 +54,7 @@ export default function Login({ aviso, onEntrar }) {
             {enviando ? 'Entrando…' : 'Ver o painel de demonstração'}
           </Button>
           <p className="mt-2 text-sm text-suave">Entra com um acesso de demonstração, sem precisar digitar nada.</p>
+          {enviando && <AvisoServidorAcordando />}
 
           <form
             aria-labelledby="titulo-login"

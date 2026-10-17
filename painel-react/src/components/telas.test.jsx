@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import Login from './Login';
@@ -243,6 +243,47 @@ describe('Login', () => {
       expect(etapas).toHaveTextContent(nome);
     }
     expect(screen.getByText('Os dados deste demo são simulados.')).toBeInTheDocument();
+  });
+
+  it('se o login demorar (servidor gratuito acordando), explica a espera depois de 6 segundos', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      vi.stubGlobal('fetch', vi.fn(() => new Promise(() => {}))); // o servidor ainda não respondeu
+      render(<Login aviso="" onEntrar={vi.fn()} />);
+
+      await userEvent.setup({ advanceTimers: vi.advanceTimersByTime }).click(screen.getByRole('button', { name: 'Ver o painel de demonstração' }));
+      expect(screen.queryByText(/dorme quando ninguém usa/)).not.toBeInTheDocument();
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(6500);
+      });
+
+      expect(screen.getByRole('status')).toHaveTextContent('dorme quando ninguém usa');
+      expect(screen.getByRole('status')).toHaveTextContent('até 1 minuto');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('o aviso de espera some quando o login termina com erro', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      let falhar;
+      vi.stubGlobal('fetch', vi.fn(() => new Promise((_, rejeitar) => { falhar = () => rejeitar(new TypeError('Failed to fetch')); })));
+      render(<Login aviso="" onEntrar={vi.fn()} />);
+      await userEvent.setup({ advanceTimers: vi.advanceTimersByTime }).click(screen.getByRole('button', { name: 'Ver o painel de demonstração' }));
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(6500);
+      });
+      expect(screen.getByRole('status')).toHaveTextContent('dorme quando ninguém usa');
+
+      await act(async () => falhar());
+
+      expect(screen.queryByText(/dorme quando ninguém usa/)).not.toBeInTheDocument();
+      expect(screen.getByRole('alert')).toHaveTextContent('Não foi possível falar com o servidor');
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('mostra o aviso de sessão terminada vindo do app', () => {
