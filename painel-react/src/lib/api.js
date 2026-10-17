@@ -70,9 +70,28 @@ async function chamar(token, caminho, opcoes = {}) {
   const eAcaoRestrita = (resto.method ?? 'GET') !== 'GET' || caminho.startsWith('/api/usuarios');
   if (resposta.status === 403 && eAcaoRestrita) throw new SemPermissaoError();
   if (resposta.status === 401 || resposta.status === 403) throw new SessaoInvalidaError();
-  if (!resposta.ok) throw Object.assign(new Error(`Falha na chamada ${caminho} (${resposta.status})`), { status: resposta.status });
+  if (!resposta.ok) {
+    // Retry-After (429): quantos segundos esperar para tentar de novo
+    const esperarSegundos = Number(resposta.headers?.get?.('Retry-After')) || null;
+    throw Object.assign(new Error(`Falha na chamada ${caminho} (${resposta.status})`), { status: resposta.status, esperarSegundos });
+  }
 
   return resposta;
+}
+
+/** O modo demonstração da API: { simulador: true, maquinas, esperaEntreFalhasSegundos }, ou null se a API não está em modo demonstração (404). */
+export async function buscarEstadoDoDemo(token) {
+  try {
+    return await (await chamar(token, '/api/demo/estado')).json();
+  } catch (falha) {
+    if (falha.status === 404) return null;
+    throw falha;
+  }
+}
+
+/** Provoca uma falha numa máquina simulada (o botão "Simular falha"). Erro com `status` 429 e `esperarSegundos` se pediu cedo demais. */
+export async function provocarFalha(token, maquina) {
+  return (await chamar(token, `/api/demo/falha/${encodeURIComponent(maquina)}`, { method: 'POST' })).json();
 }
 
 /**

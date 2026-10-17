@@ -53,12 +53,22 @@ class ModeloDeMaquina {
         this.rpm = rpmNormal;
     }
 
-    boolean emEpisodio() {
+    synchronized boolean emEpisodio() {
         return leiturasRestantesDoEpisodio > 0;
     }
 
+    /**
+     * Começa agora um episódio (o botão "Simular falha" do painel): a máquina passa a subir em direção aos valores
+     * de falha pelas próximas `leituras` leituras, e depois volta ao normal sozinha. Se já havia um episódio, ele é trocado.
+     */
+    synchronized void forcarEpisodio(TipoDeFalha tipo, int leituras) {
+        leiturasRestantesDoEpisodio = leituras;
+        episodioEsquenta = tipo.esquenta();
+        episodioVibra = tipo.vibra();
+    }
+
     /** Avança uma leitura e devolve os valores novos. */
-    LeituraRequest proxima(long timestampSegundos, Random random) {
+    synchronized LeituraRequest proxima(long timestampSegundos, Random random) {
         if (leiturasRestantesDoEpisodio > 0) {
             leiturasRestantesDoEpisodio--;
         } else if (random.nextDouble() < CHANCE_DE_EPISODIO) {

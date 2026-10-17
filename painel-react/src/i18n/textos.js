@@ -96,6 +96,13 @@ export const TEXTOS = {
     'limites.erro': 'Não foi possível salvar os limites. Tente de novo.',
     'limites.semMudanca': 'Nenhum limite foi alterado.',
 
+    'maquina.simularFalha': 'Simular falha',
+    'maquina.simularFalhaAria': 'Simular falha em {nome}',
+    'demo.falhaIniciada': 'Falha simulada em {nome}: em instantes ela passa dos limites, o alerta aparece na lista e, em cerca de {seg} s, a máquina volta ao normal.',
+    'demo.falhaAguarde': '{nome} acabou de falhar. Aguarde {seg} s para simular de novo.',
+    'demo.falhaSemPermissao': 'Só operadores e administradores podem simular falhas.',
+    'demo.falhaErro': 'Não foi possível simular a falha agora.',
+
     'controles.periodo': 'Período do gráfico',
     'periodo.aoVivo': 'Ao vivo',
     'periodo.1h': '1 hora',
@@ -303,6 +310,13 @@ export const TEXTOS = {
     'limites.invalido': 'Use only numbers greater than zero.',
     'limites.erro': 'Could not save the limits. Please try again.',
     'limites.semMudanca': 'No limit was changed.',
+
+    'maquina.simularFalha': 'Simulate failure',
+    'maquina.simularFalhaAria': 'Simulate a failure on {nome}',
+    'demo.falhaIniciada': 'Failure simulated on {nome}: shortly it goes over the limits, the alert shows up in the list and, in about {seg} s, the machine goes back to normal.',
+    'demo.falhaAguarde': '{nome} just failed. Wait {seg} s to simulate again.',
+    'demo.falhaSemPermissao': 'Only operators and administrators can simulate failures.',
+    'demo.falhaErro': 'Could not simulate the failure right now.',
 
     'controles.periodo': 'Chart period',
     'periodo.aoVivo': 'Live',
