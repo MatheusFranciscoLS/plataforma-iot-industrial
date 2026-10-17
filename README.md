@@ -180,7 +180,7 @@ Em produção, troque a senha do `admin` (tela de usuários do painel) ou defina
 
 # ✅ Testes Automatizados
 
-A API Java (`iot-core`, 139 testes), o painel React (`painel-react`, 127 testes com Vitest e Testing Library), o gateway Node (`servidor-node`, 12 testes), o simulador Python (`simulador-python`, 6 testes) e o teste no navegador (`e2e`, 5 testes com Playwright, contra tudo rodando no Docker Compose) rodam a cada push na `main` e a cada pull request no GitHub Actions (o selo no topo mostra o resultado). Dos 139 testes da API, 9 usam um PostgreSQL de verdade num container e rodam no CI; sem Docker na máquina eles são pulados.
+A API Java (`iot-core`, 208 testes), o painel React (`painel-react`, 172 testes com Vitest e Testing Library), o gateway Node (`servidor-node`, 12 testes), o simulador Python (`simulador-python`, 6 testes) e o teste no navegador (`e2e`, 9 testes com Playwright, incluindo a acessibilidade com o axe, contra tudo rodando no Docker Compose) rodam a cada push na `main` e a cada pull request no GitHub Actions (o selo no topo mostra o resultado). Dos 208 testes da API, 10 usam um PostgreSQL de verdade num container e rodam no CI; sem Docker na máquina eles são pulados.
 
 ## 🏋️ Teste de carga
 
