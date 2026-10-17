@@ -1,4 +1,4 @@
-import { Languages, LogOut, Moon, Sun } from 'lucide-react';
+import { Languages, LogOut, Moon, Sun, Users } from 'lucide-react';
 import { useIdioma } from '@/i18n/idioma-contexto';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -15,7 +15,8 @@ function Marca() {
   );
 }
 
-export default function Cabecalho({ conexao, tema, onAlternarTema, onSair }) {
+/** `usuario` e `perfil` mostram quem está logado; `onUsuarios` (só para o administrador) abre a gerência de usuários. */
+export default function Cabecalho({ conexao, tema, onAlternarTema, onSair, usuario = null, perfil = null, onUsuarios }) {
   const { t, alternarIdioma } = useIdioma();
   const rotuloTema = tema === 'escuro' ? t('tema.claro') : t('tema.escuro');
 
@@ -31,6 +32,17 @@ export default function Cabecalho({ conexao, tema, onAlternarTema, onSair }) {
 
       <div className="flex items-center gap-2 sm:gap-4">
         <StatusConexao conexao={conexao} />
+
+        {usuario && perfil && (
+          <p className="hidden text-sm text-suave sm:block">{t('cabecalho.usuario', { nome: usuario, perfil: t(`perfil.${perfil}`) })}</p>
+        )}
+
+        {onUsuarios && (
+          <Button variant="outline" onClick={onUsuarios}>
+            <Users aria-hidden="true" />
+            {t('usuarios.botao')}
+          </Button>
+        )}
 
         <Tooltip>
           <TooltipTrigger asChild>
