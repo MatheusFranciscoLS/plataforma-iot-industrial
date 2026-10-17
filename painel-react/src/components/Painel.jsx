@@ -6,10 +6,13 @@ import { useAlertas } from '@/hooks/useAlertas';
 import { useLimites } from '@/hooks/useLimites';
 import { useTelemetria } from '@/hooks/useTelemetria';
 import { agruparHistorico, MAX_PONTOS, serieDaMaquina } from '@/lib/historico';
+import { useSerie } from '@/hooks/useServidorPorPeriodo';
 import { METRICA_PADRAO } from '@/lib/metricas';
+import { faixaEmMinutos, serieParaLinhas } from '@/lib/periodos';
 import { avaliarMaquina, formatarNumero, MAQUINAS, resumirFabrica } from '@/lib/limites';
 import { lerPerfil, lerUsuario } from '@/lib/token';
 import AlertasRecentes from './AlertasRecentes';
+import ComparacaoDeMaquinas from './ComparacaoDeMaquinas';
 import DetalheDaMaquina from './DetalheDaMaquina';
 import Cabecalho from './Cabecalho';
 import GerenciarUsuarios from './GerenciarUsuarios';
@@ -36,7 +39,14 @@ export default function Painel({ token, tema, onAlternarTema, onSair, onSessaoIn
   const [filtros, setFiltros] = useState({});
   const [quantosAlertas, setQuantosAlertas] = useState(ALERTAS_POR_PAGINA);
   const { historico, leituras, statusAtual, conexao, erroHistorico } = useTelemetria(token, onSessaoInvalida, pontos);
-  const historicoDoGrafico = useMemo(() => agruparHistorico(leituras, pontos, metrica.id), [leituras, pontos, metrica]);
+  // 'ao-vivo' desenha as leituras que chegam agora; '1h', '6h' e '24h' desenham as médias calculadas no servidor.
+  const [periodo, setPeriodo] = useState('ao-vivo');
+  const aoVivo = periodo === 'ao-vivo';
+  const { dados: serie, carregando: carregandoSerie, erro: erroSerie } = useSerie(token, aoVivo ? null : periodo, null, onSessaoInvalida);
+  const historicoDoGrafico = useMemo(
+    () => (aoVivo ? agruparHistorico(leituras, pontos, metrica.id) : serieParaLinhas(serie, metrica.id)),
+    [aoVivo, leituras, pontos, metrica, serie],
+  );
   const { alertas, pendentes, erro: erroAlertas, erroAoReconhecer, reconhecer } = useAlertas(token, onSessaoInvalida, { limite: quantosAlertas, filtros });
   const { limitesDe, padrao, recarregar: recarregarLimites } = useLimites(token, onSessaoInvalida);
   const i18n = useIdioma();
@@ -104,8 +114,15 @@ export default function Painel({ token, tema, onAlternarTema, onSair, onSessaoIn
             onMetrica={setMetrica}
             pontos={pontos}
             onPontos={setPontos}
+            periodo={periodo}
+            onPeriodo={setPeriodo}
+            faixaMinutos={faixaEmMinutos(serie)}
+            carregando={carregandoSerie}
+            erroPeriodo={erroSerie}
           />
         </Suspense>
+
+        <ComparacaoDeMaquinas token={token} onSessaoInvalida={onSessaoInvalida} />
 
         <AlertasRecentes
           alertas={alertas}

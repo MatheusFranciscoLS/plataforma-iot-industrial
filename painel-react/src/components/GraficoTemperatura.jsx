@@ -31,10 +31,28 @@ function BalaoDoGrafico({ active, payload, label, metrica, limitesPorMaquina, ho
 /**
  * Gráfico de linhas de uma grandeza (temperatura, vibração ou rotação), uma linha por máquina.
  * `limitesPorMaquina` ({ 'MAQ-01': 95, ... }) traz o limite de cada máquina; sem ele vale o limite padrão da grandeza.
+ * `periodo` é 'ao-vivo' (leituras que chegam agora) ou '1h', '6h', '24h' (médias do servidor, a cada `faixaMinutos` min);
+ * com `onPeriodo` o gráfico mostra o seletor de período. `carregando` e `erroPeriodo` valem só nos períodos.
  */
-export default function GraficoTemperatura({ historico, leituras, metrica, limitesPorMaquina = null, onMetrica, pontos, onPontos }) {
+export default function GraficoTemperatura({
+  historico,
+  leituras,
+  metrica,
+  limitesPorMaquina = null,
+  onMetrica,
+  pontos,
+  onPontos,
+  periodo = 'ao-vivo',
+  onPeriodo,
+  faixaMinutos = null,
+  carregando = false,
+  erroPeriodo = false,
+}) {
   const { t, locale } = useIdioma();
-  const hora = (timestamp) => new Date(timestamp * 1000).toLocaleTimeString(locale);
+  const aoVivo = periodo === 'ao-vivo';
+  // Nas médias de 6 h e 24 h os segundos não importam (e a hora ocuparia espaço do eixo)
+  const hora = (timestamp) =>
+    new Date(timestamp * 1000).toLocaleTimeString(locale, aoVivo ? undefined : { hour: '2-digit', minute: '2-digit' });
   const grandeza = t(`metrica.${metrica.id}`);
   const vazio = historico.length === 0;
   const [ocultas, setOcultas] = useState(() => new Set());
@@ -69,16 +87,20 @@ export default function GraficoTemperatura({ historico, leituras, metrica, limit
           <h2 id="titulo-grafico" className="font-condensada text-2xl font-semibold">
             {t('grafico.titulo', { grandeza })}
           </h2>
-          <Button
-            variant="outline"
-            size="sm"
-            className="mt-2"
-            disabled={leituras.length === 0}
-            onClick={() => baixarArquivo('leituras.csv', gerarCsv(leituras))}
-          >
-            <Download aria-hidden="true" />
-            {t('grafico.csv')}
-          </Button>
+          {aoVivo ? (
+            <Button
+              variant="outline"
+              size="sm"
+              className="mt-2"
+              disabled={leituras.length === 0}
+              onClick={() => baixarArquivo('leituras.csv', gerarCsv(leituras))}
+            >
+              <Download aria-hidden="true" />
+              {t('grafico.csv')}
+            </Button>
+          ) : (
+            faixaMinutos && <p className="mt-2 text-sm text-suave">{t('grafico.mediaPorFaixa', { min: faixaMinutos })}</p>
+          )}
         </div>
         <ControlesDoGrafico
           ocultas={ocultas}
@@ -88,6 +110,8 @@ export default function GraficoTemperatura({ historico, leituras, metrica, limit
           metrica={metrica}
           onMetrica={onMetrica}
           limites={limites}
+          periodo={periodo}
+          onPeriodo={onPeriodo}
         />
       </div>
 
@@ -106,8 +130,11 @@ export default function GraficoTemperatura({ historico, leituras, metrica, limit
 
       <div className="relative mt-4 h-72 w-full md:h-96">
         {vazio && (
-          <p className="absolute inset-0 z-10 flex items-center justify-center text-sm text-suave">
-            {t('grafico.vazio')}
+          <p
+            role={erroPeriodo ? 'alert' : undefined}
+            className={`absolute inset-0 z-10 flex items-center justify-center text-sm ${erroPeriodo ? 'text-alarme' : 'text-suave'}`}
+          >
+            {aoVivo ? t('grafico.vazio') : erroPeriodo ? t('grafico.erroPeriodo') : carregando ? t('grafico.carregandoPeriodo') : t('grafico.vazioPeriodo')}
           </p>
         )}
         <ResponsiveContainer>

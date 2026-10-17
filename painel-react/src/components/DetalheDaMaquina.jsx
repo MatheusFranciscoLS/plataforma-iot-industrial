@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react';
 import { useIdioma } from '@/i18n/idioma-contexto';
 import { useLeiturasDaMaquina } from '@/hooks/useLeiturasDaMaquina';
 import { resumirLeituras } from '@/lib/estatisticas';
@@ -7,6 +8,9 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { cn } from '@/lib/utils';
 
 const CAMPO_DO_RESUMO = { temperaturaMotor: 'temperatura', vibracao: 'vibracao', rpm: 'rpm' };
+
+// O gráfico usa o Recharts (a parte mais pesada da página): só é baixado quando a janela abre.
+const GraficoDaMaquina = lazy(() => import('./GraficoDaMaquina'));
 
 function Estatisticas({ resumo, limites }) {
   const { t, locale } = useIdioma();
@@ -102,6 +106,10 @@ export default function DetalheDaMaquina({ token, maquina, limites = LIMITES_PAD
           <DialogTitle className="font-condensada text-3xl font-semibold">{maquina}</DialogTitle>
           <DialogDescription>{t('detalhe.descricao')}</DialogDescription>
         </DialogHeader>
+
+        <Suspense fallback={<p className="text-sm text-suave">{t('detalhe.carregando')}</p>}>
+          <GraficoDaMaquina token={token} maquina={maquina} limites={limites} onSessaoInvalida={onSessaoInvalida} />
+        </Suspense>
 
         {carregando && <p className="text-sm text-suave">{t('detalhe.carregando')}</p>}
         {erro && <p role="alert" className="text-sm font-medium text-alarme">{t('detalhe.erro')}</p>}

@@ -1,19 +1,50 @@
 import { useIdioma } from '@/i18n/idioma-contexto';
 import { formatarNumero } from '@/lib/limites';
 import { OPCOES_PONTOS } from '@/lib/historico';
+import { PERIODOS } from '@/lib/periodos';
 import { METRICAS } from '@/lib/metricas';
 import { SERIES } from '@/lib/series';
 import { cn } from '@/lib/utils';
 
 /**
- * Controles do gráfico: qual grandeza desenhar, quais máquinas aparecem (a legenda é clicável)
- * e quantos pontos mostrar.
+ * Controles do gráfico: qual grandeza desenhar, quais máquinas aparecem (a legenda é clicável),
+ * o período (ao vivo ou 1 h, 6 h, 24 h, quando a tela passa `onPeriodo`) e, ao vivo, quantos pontos mostrar.
  */
-export default function ControlesDoGrafico({ ocultas, onAlternar, pontos, onPontos, metrica, onMetrica, limites = [metrica.limite] }) {
+export default function ControlesDoGrafico({
+  ocultas,
+  onAlternar,
+  pontos,
+  onPontos,
+  metrica,
+  onMetrica,
+  limites = [metrica.limite],
+  periodo = 'ao-vivo',
+  onPeriodo,
+}) {
   const { t, locale } = useIdioma();
+  const aoVivo = periodo === 'ao-vivo';
 
   return (
     <div className="flex flex-col items-start gap-3 md:items-end">
+      {onPeriodo && (
+        <div role="group" aria-label={t('controles.periodo')} className="flex flex-wrap items-center gap-2 text-sm">
+          {['ao-vivo', ...PERIODOS].map((p) => (
+            <button
+              key={p}
+              type="button"
+              aria-pressed={periodo === p}
+              onClick={() => onPeriodo(p)}
+              className={cn(
+                'min-h-11 rounded border px-3 font-medium',
+                periodo === p ? 'border-aco bg-aco text-painel' : 'border-linha',
+              )}
+            >
+              {t(p === 'ao-vivo' ? 'periodo.aoVivo' : `periodo.${p}`)}
+            </button>
+          ))}
+        </div>
+      )}
+
       <div role="group" aria-label={t('controles.grandeza')} className="flex flex-wrap items-center gap-2 text-sm">
         {METRICAS.map((m) => (
           <button
@@ -65,6 +96,7 @@ export default function ControlesDoGrafico({ ocultas, onAlternar, pontos, onPont
         )}
       </div>
 
+      {aoVivo && (
       <div role="group" aria-label={t('controles.pontos')} className="flex flex-wrap items-center gap-2 text-sm">
         <span className="text-suave">{t('controles.mostrar')}</span>
         {OPCOES_PONTOS.map((n) => (
@@ -83,6 +115,7 @@ export default function ControlesDoGrafico({ ocultas, onAlternar, pontos, onPont
         ))}
         <span className="text-suave">{t('controles.pontosSufixo')}</span>
       </div>
+      )}
     </div>
   );
 }
