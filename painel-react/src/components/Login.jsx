@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Languages, Loader2, LogIn, Play } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useIdioma } from '@/i18n/idioma-contexto';
-import { fazerLogin } from '@/lib/api';
+import { aquecerServidores, fazerLogin } from '@/lib/api';
 import { ACESSO_DEMO } from '@/lib/demo';
 import AvisoServidorAcordando from './AvisoServidorAcordando';
 import FluxoDoSistema from './FluxoDoSistema';
@@ -15,6 +15,11 @@ export default function Login({ aviso, onEntrar }) {
   const [senha, setSenha] = useState('');
   const [erro, setErro] = useState('');
   const [enviando, setEnviando] = useState(false);
+
+  // Começa a acordar os servidores já na abertura da página, não só no clique de entrar.
+  useEffect(() => {
+    aquecerServidores();
+  }, []);
 
   async function entrar(nome, chave) {
     setErro('');
