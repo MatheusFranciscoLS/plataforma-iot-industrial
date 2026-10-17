@@ -1,7 +1,7 @@
 name: Docker
 
 # Sobe todos os serviços com o docker-compose e testa o caminho completo:
-# simulador -> API Java -> RabbitMQ -> gateway Node -> WebSocket.
+# simulador -> API Java -> RabbitMQ -> gateway Node -> WebSocket -> painel no navegador (Playwright).
 on:
   push:
     branches: [main]
@@ -13,6 +13,7 @@ on:
       - "servidor-node/**"
       - "simulador-python/**"
       - "painel-react/**"
+      - "e2e/**"
       - ".github/workflows/docker.yml"
       - ".github/scripts/**"
 
@@ -77,6 +78,41 @@ jobs:
           mkdir /tmp/e2e && cp .github/scripts/e2e-socket.mjs /tmp/e2e/
           cd /tmp/e2e && npm init -y > /dev/null && npm install --silent socket.io-client
           node e2e-socket.mjs
+
+      - name: Esperar o painel ficar de pé
+        run: |
+          for i in $(seq 1 40); do
+            if curl -fs http://localhost:5173 > /dev/null; then echo "Painel no ar"; exit 0; fi
+            sleep 3
+          done
+          echo "O painel não ficou de pé a tempo"; exit 1
+
+      - name: Instalar o Node 22
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: e2e/package-lock.json
+
+      - name: Instalar o Playwright e o Chromium
+        working-directory: e2e
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+
+      - name: Testes no navegador (clica no botão de demonstração e confere as máquinas ao vivo)
+        working-directory: e2e
+        run: npx playwright test
+
+      - name: Guardar o relatório do navegador se algo falhou
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: relatorio-playwright
+          path: |
+            e2e/playwright-report
+            e2e/test-results
+          retention-days: 7
 
       - name: Mostrar os logs se algo falhou
         if: failure()
