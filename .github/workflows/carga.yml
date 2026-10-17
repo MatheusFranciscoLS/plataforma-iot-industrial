@@ -1,0 +1,60 @@
+name: Teste de carga
+
+# Sobe a API com o banco e a fila (sem o simulador, para o teste ser o único a mandar leituras)
+# e roda o k6. Se a API ficar mais lenta do que os limites em testes-de-carga/carga.js, o teste falha.
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "testes-de-carga/**"
+      - ".github/workflows/carga.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  k6:
+    name: Carga com o k6
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Baixar o código
+        uses: actions/checkout@v7
+
+      - name: Subir o banco, a fila e a API
+        run: docker compose up -d --build postgres-db rabbitmq iot-core
+
+      - name: Esperar a API ficar de pé
+        run: |
+          for i in $(seq 1 60); do
+            if curl -fs http://localhost:8080/actuator/health | grep -q '"UP"'; then echo "API no ar"; exit 0; fi
+            sleep 3
+          done
+          docker compose logs iot-core | tail -50
+          echo "A API não ficou de pé a tempo"; exit 1
+
+      - name: Rodar o k6
+        run: |
+          chmod 777 testes-de-carga
+          docker run --rm --network host -v "$PWD/testes-de-carga:/scripts" -w /scripts \
+            grafana/k6:1.1.0 run carga.js
+
+      - name: Mostrar o resultado no resumo do job
+        if: always()
+        run: |
+          if [ -f testes-de-carga/resultado.md ]; then
+            { echo "## Resultado do teste de carga"; echo; cat testes-de-carga/resultado.md; } >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Guardar o resultado completo
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: resultado-k6
+          path: testes-de-carga/resultado.*
+          if-no-files-found: ignore
+
+      - name: Logs da API (se algo falhou)
+        if: failure()
+        run: docker compose logs iot-core | tail -80
