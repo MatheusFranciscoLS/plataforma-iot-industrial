@@ -9,6 +9,7 @@
 ![Docker](https://img.shields.io/badge/Docker-2CA5E0?style=for-the-badge&logo=docker&logoColor=white)
 
 [![CI](https://github.com/MatheusFranciscoLS/plataforma-iot-industrial/actions/workflows/ci.yml/badge.svg)](https://github.com/MatheusFranciscoLS/plataforma-iot-industrial/actions/workflows/ci.yml)
+[![Segurança](https://github.com/MatheusFranciscoLS/plataforma-iot-industrial/actions/workflows/seguranca.yml/badge.svg)](https://github.com/MatheusFranciscoLS/plataforma-iot-industrial/actions/workflows/seguranca.yml)
 
 > 🟢 **Acesse o painel rodando na nuvem:** [Clique aqui para abrir o Dashboard](https://plataforma-iot-industrial.vercel.app)
 > *(Utilize as credenciais de teste disponíveis no final da página para entrar)*
@@ -49,7 +50,7 @@ O painel funciona em tela de computador e de celular, em tema claro e escuro, em
 - **Usuários e perfis:** administrador (gerencia usuários), operador (reconhece alertas e troca limites) e somente leitura, com tela de usuários no painel.
 - **Segurança ponta a ponta:** rotas REST e WebSocket protegidas por JWT, senhas em BCrypt, limite de tentativas no login e na troca de senha, chave dos tokens por variável de ambiente, troca da própria senha e renovação automática do token (sessão limitada a 12 horas desde o login).
 - **API documentada e observável:** documentação interativa em `/swagger-ui.html` e métricas em formato Prometheus.
-- **Qualidade:** testes automatizados nos quatro serviços, testes da API contra um PostgreSQL de verdade, teste no navegador e CI que sobe tudo com Docker Compose a cada mudança.
+- **Qualidade:** testes automatizados nos quatro serviços, testes da API contra um PostgreSQL de verdade, teste no navegador e CI que sobe tudo com Docker Compose a cada mudança. Toda mudança e toda segunda-feira passam por uma análise de código (CodeQL) e por uma busca de vulnerabilidades em dependências e na imagem Docker (Trivy); o Dependabot abre os PRs de atualização.
 
 ---
 
