@@ -20,38 +20,64 @@ Uma arquitetura de microsserviços ponta a ponta para monitoramento em tempo rea
 # 📸 Painel em funcionamento
 
 <p align="center">
-  <img src="docs/painel-claro.png" alt="Painel de monitoramento com uma faixa vermelha avisando que uma máquina está em estado crítico, os cartões de temperatura, vibração e rotação das três máquinas e o gráfico de temperatura com a linha do limite" width="100%">
+  <img src="docs/painel-ao-vivo.gif" alt="Gravação do painel ao vivo: os números e as barras das três máquinas mudam sozinhos e o gráfico de temperatura se desenha em tempo real" width="100%">
 </p>
 
-A máquina em estado crítico (MAQ-01) é destacada em vermelho; o gráfico mostra o histórico de temperatura da frota.
+O painel publicado, com leituras de um simulador de sensores (os números mudam sozinhos, em tempo real). Uma máquina que passa do limite fica destacada em vermelho e gera um alerta.
+
+<p align="center">
+  <img src="docs/painel-claro.png" alt="Painel no tema claro: resumo da fábrica, cartões de temperatura, vibração e rotação das três máquinas, gráfico de temperatura com a linha do limite e a lista de alertas com filtros" width="49%">
+  <img src="docs/painel-escuro.png" alt="O mesmo painel no tema escuro" width="49%">
+</p>
+
+<p align="center">
+  <img src="docs/limites-de-alerta.png" alt="Janela de limites de alerta: temperatura e vibração de cada máquina, com botão para voltar ao padrão" width="49%">
+  <img src="docs/painel-celular.png" alt="O painel em uma tela de celular" width="22%">
+</p>
+
+O painel funciona em tela de computador e de celular, em tema claro e escuro, em português e em inglês, e passou por uma auditoria automática de acessibilidade (axe) e por testes de navegação só pelo teclado.
 
 ---
 
 # ✨ Funcionalidades Principais
 
-- **Streaming em Tempo Real:** Visualização instantânea da telemetria das máquinas via WebSockets, com atraso inferior a 1 segundo.
-- **Alertas Dinâmicos:** Interface reativa que destaca máquinas em estado crítico (ex: Temperatura > 95°C ou Vibração > 5.0 mm/s) com efeitos visuais e mudança de cores.
-- **Histórico Consolidado:** Gráfico interativo desenhando a linha do tempo da temperatura de toda a frota, consumido diretamente do banco relacional.
-- **Segurança Ponta a Ponta:** Rotas da API REST e conexões de WebSocket totalmente protegidas por JSON Web Tokens (JWT).
+- **Streaming em Tempo Real:** telemetria das máquinas via WebSockets; se o tempo real falhar, o painel avisa e busca as leituras na API a cada 3 segundos.
+- **Alertas completos:** a API registra um alerta quando uma máquina passa do limite (padrão 95 °C e 5,0 mm/s). Cada máquina pode ter o seu limite, os alertas se reconhecem (quem viu e quando) e a lista filtra por máquina, tipo e situação.
+- **Histórico e gráfico interativo:** temperatura, vibração ou rotação, escolha de máquinas e de quantos pontos, janela de detalhes por máquina (mínimo, média, máximo) e exportação em CSV.
+- **Usuários e perfis:** administrador (gerencia usuários), operador (reconhece alertas e troca limites) e somente leitura, com tela de usuários no painel.
+- **Segurança ponta a ponta:** rotas REST e WebSocket protegidas por JWT, senhas em BCrypt, limite de tentativas no login e chave dos tokens por variável de ambiente.
+- **API documentada e observável:** documentação interativa em `/swagger-ui.html` e métricas em formato Prometheus.
+- **Qualidade:** testes automatizados nos quatro serviços, testes da API contra um PostgreSQL de verdade, teste no navegador e CI que sobe tudo com Docker Compose a cada mudança.
 
 ---
 
 # 🗺️ Arquitetura Visual
 
-O fluxo de dados segue um padrão de produtor-consumidor, garantindo que o sistema continue estável mesmo sob alta carga de dados dos sensores IoT.
+O caminho de uma leitura segue um padrão de produtor-consumidor: a API Java recebe e guarda a leitura, avisa a fila, e o gateway entrega ao painel em tempo real. Se a fila ou o tempo real falharem, a leitura continua salva e o painel busca na API.
 
 ```mermaid
 graph TD
-    A[📡 Simulador Sensores IoT<br/>Python] -->|Envia Telemetria| B(📮 RabbitMQ)
+    S[📡 Sensores<br/>simulador Python ou modo demonstração] -->|POST /api/sensores| A
 
-    B -->|Consumo Assíncrono| C[⚡ Gateway Real-Time<br/>Node.js]
+    A[🛡️ API Core<br/>Spring Boot 4 · Java 21] -->|1 salva a leitura| DB[(🗄️ PostgreSQL<br/>migrações Flyway)]
+    A -->|2 avalia limites e grava alertas| DB
+    A -->|3 publica na fila| Q(📮 RabbitMQ)
 
-    C -->|Streaming WebSockets| D[💻 Dashboard<br/>React + Tailwind]
+    Q -->|consumo assíncrono| G[⚡ Gateway real-time<br/>Node.js · Socket.io]
+    G -->|WebSocket com JWT| P[💻 Painel<br/>React · Tailwind · shadcn/ui]
 
-    E[🛡️ API Principal & Auth<br/>Spring Boot Java] -->|Valida Login & Histórico| D
+    P -->|login, histórico, alertas, limites, usuários<br/>REST com JWT| A
 
-    E -->|Persistência| F[(🗄️ PostgreSQL)]
+    A -.->|/swagger-ui.html · /actuator/prometheus| O[📊 Documentação e métricas]
 ```
+
+Perfis de acesso (o perfil vai dentro do token e a regra fica na API):
+
+| Perfil | Vê tudo | Reconhece alertas e troca limites | Gerencia usuários |
+|---|:-:|:-:|:-:|
+| Administrador | ✅ | ✅ | ✅ |
+| Operador | ✅ | ✅ | ❌ |
+| Somente leitura | ✅ | ❌ | ❌ |
 
 ---
 
@@ -59,13 +85,13 @@ graph TD
 
 | Serviço | Tecnologia Base | Bibliotecas / Ferramentas |
 |---|---|---|
-| Frontend UI | React.js (Vite) | Tailwind CSS, Recharts, Socket.io-client |
+| Frontend UI | React 19 (Vite) | Tailwind CSS, shadcn/ui (Radix), Recharts, Socket.io-client, Vitest, Testing Library, Playwright |
 | Gateway Real-Time | Node.js | Express, Socket.io, JsonWebToken, Amqplib |
-| API Core & Auth | Java 21 | Spring Boot, Spring Security, io.jsonwebtoken |
-| Mensageria | RabbitMQ | Protocolo AMQP, RabbitMQ Management |
-| Banco de Dados | PostgreSQL | JPA/Hibernate via Spring |
+| API Core & Auth | Java 21 · Spring Boot 4 | Spring Security, JWT (jjwt), JPA/Hibernate, Flyway, springdoc (OpenAPI), Micrometer + Prometheus, Testcontainers |
+| Mensageria | RabbitMQ | Protocolo AMQP |
+| Banco de Dados | PostgreSQL | Migrações versionadas com Flyway |
 | Simulador IoT | Python 3 | Requests |
-| Infraestrutura | Docker | Docker Compose, Multi-container network |
+| Infraestrutura | Docker · GitHub Actions | Docker Compose, CI com testes e teste no navegador; hospedagem em Render, Vercel, Supabase e CloudAMQP (planos gratuitos) |
 
 ---
 
@@ -138,7 +164,7 @@ Em produção, troque a senha do `admin` (tela de usuários do painel) ou defina
 
 # ✅ Testes Automatizados
 
-A API Java (`iot-core`, 56 testes), o gateway Node (`servidor-node`, 12 testes) e o simulador Python (`simulador-python`, 6 testes) têm testes automatizados, que rodam a cada push na `main` e a cada pull request no GitHub Actions (o selo no topo mostra o resultado).
+A API Java (`iot-core`, 139 testes), o painel React (`painel-react`, 127 testes com Vitest e Testing Library), o gateway Node (`servidor-node`, 12 testes), o simulador Python (`simulador-python`, 6 testes) e o teste no navegador (`e2e`, 5 testes com Playwright, contra tudo rodando no Docker Compose) rodam a cada push na `main` e a cada pull request no GitHub Actions (o selo no topo mostra o resultado). Dos 139 testes da API, 9 usam um PostgreSQL de verdade num container e rodam no CI; sem Docker na máquina eles são pulados.
 
 O que os testes do gateway Node cobrem: porteiro de tokens (válido, ausente, outra chave, vencido, sem assinatura), mensagens estragadas da fila, reconexão com espera crescente e a lista de origens do CORS. Os do simulador cobrem os campos e as faixas das leituras e o envio (cabeçalho de chave e tempo limite).
 
@@ -150,6 +176,11 @@ O que os testes do gateway Node cobrem: porteiro de tokens (válido, ausente, ou
 | Rotas protegidas: `GET /api/sensores` é bloqueado sem token ou com token inválido e liberado com token válido | Aplicação completa |
 | Entrada de dados: `POST /api/sensores` salva a leitura, envia para a fila `sensores.fila` e continua respondendo 200 mesmo se o RabbitMQ falhar | Aplicação completa, RabbitMQ simulado |
 | Histórico: no máximo 60 registros, do mais novo para o mais antigo; data de recebimento preenchida ao salvar | Teste de repositório (JPA + H2) |
+| Perfis: leitura não reconhece alerta nem troca limite, operador não gerencia usuários, token sem perfil vale só como leitura, sem token é 401 e sem permissão é 403, o último administrador não sai | Aplicação completa |
+| Alertas e limites: alerta só na passagem do limite, limite por máquina, reconhecer guarda quem viu, filtros da lista | Aplicação completa |
+| Migrações e consultas no banco de produção: banco vazio e banco antigo do Hibernate recebem as migrações, e a API inteira roda com Flyway e `validate` | PostgreSQL 17 num container (Testcontainers) |
+| Documentação e métricas: `/v3/api-docs` descreve as rotas, `/actuator/prometheus` só responde para administrador e conta leituras, alertas e falhas da fila | Aplicação completa |
+| Painel: cartões, gráfico, alertas, limites, usuários, idioma, perfis, sessão vencida e erros de rede | Vitest + Testing Library; no navegador, Playwright |
 
 Para rodar na sua máquina:
 
@@ -162,6 +193,9 @@ cd servidor-node && npm ci && npm test
 
 # Simulador Python
 cd simulador-python && pip install -r requirements.txt && python -m unittest -v
+
+# Painel React
+cd painel-react && npm ci && npm run lint && npm test
 ```
 
 ---
@@ -199,12 +233,12 @@ cd simulador-python && pip install -r requirements.txt && python -m unittest -v
 
 ## Limitações conhecidas e próximos passos
 
-- Não há tela nem rota para criar usuários: o usuário de demonstração é criado na subida e outros precisam ser inseridos no banco.
 - O CORS aceita qualquer origem (`*`) por padrão; em produção, defina `CORS_ORIGINS` na API Java e `CORS_ORIGIN` no gateway com o endereço do painel.
 - `POST /api/sensores` não exige autenticação por padrão (veja `SENSOR_API_KEY` acima).
-- O limite de tentativas do login é por instância da API e fica na memória; com mais de uma instância, cada uma conta por conta própria.
-- O painel React ainda não tem testes automatizados.
-- O `docker-compose.yml` foi ajustado (endereços entre serviços, healthchecks e volume do banco) sem poder ser testado com Docker neste ambiente.
+- O limite de tentativas do login, o estado "máquina estava acima do limite" (que evita alertas repetidos) e a cópia dos limites por máquina ficam na memória da API; com mais de uma instância, cada uma teria a sua. Hoje a API roda numa instância só.
+- O usuário só troca a senha de outro usuário se for administrador; não existe "esqueci minha senha" nem troca da própria senha pelo usuário comum, e o token dura 2 horas sem renovação automática.
+- A API de demonstração fica na hospedagem gratuita: dorme sem visitas e leva cerca de um minuto para acordar (a tela de login já a acorda ao abrir). Os dados do demo vêm de um simulador, não de sensores reais.
+- Próximos passos possíveis: renovação de token, notificação de alerta por e-mail ou webhook, histórico agregado por intervalo calculado no servidor e uma tela de comparação entre máquinas.
 
 ---
 
@@ -214,7 +248,11 @@ cd simulador-python && pip install -r requirements.txt && python -m unittest -v
 - Mensageria Assíncrona
 - Arquitetura Event-Driven
 - WebSockets
-- JWT Authentication
+- JWT Authentication e controle de acesso por perfil (RBAC)
+- Migrações de banco versionadas (Flyway)
+- Testes automatizados em vários níveis (unidade, integração, PostgreSQL real, navegador) e CI
+- Observabilidade (métricas Prometheus) e documentação de API (OpenAPI)
+- Acessibilidade e internacionalização (PT/EN) no front-end
 - Dockerização
 - Comunicação em Tempo Real
 - Producer / Consumer Pattern
