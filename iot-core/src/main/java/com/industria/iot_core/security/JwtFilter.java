@@ -40,7 +40,10 @@ public class JwtFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
         String tokenHeader = request.getHeader("Authorization");
 
-        if (tokenHeader != null && tokenHeader.startsWith("Bearer ")) {
+        // Se um filtro anterior (o do token de métricas) já identificou quem chama, não há o que ler aqui
+        boolean jaAutenticado = SecurityContextHolder.getContext().getAuthentication() != null;
+
+        if (!jaAutenticado && tokenHeader != null && tokenHeader.startsWith("Bearer ")) {
             String token = tokenHeader.substring(7); // Tira a palavra "Bearer "
             try {
                 // Tenta ler e validar o token

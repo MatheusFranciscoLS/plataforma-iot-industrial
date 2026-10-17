@@ -1,6 +1,7 @@
 package com.industria.iot_core.config;
 
 import com.industria.iot_core.security.JwtFilter;
+import com.industria.iot_core.security.MetricasTokenFilter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -24,13 +25,15 @@ import java.util.List;
 public class SecurityConfig {
 
     private final JwtFilter jwtFilter;
+    private final MetricasTokenFilter metricasTokenFilter;
 
     // Origens aceitas pelo CORS, separadas por vírgula. O padrão "*" mantém o comportamento anterior;
     // em produção, defina CORS_ORIGINS com o endereço do painel.
     private final List<String> origensPermitidas;
 
-    public SecurityConfig(JwtFilter jwtFilter, @Value("${api.cors.origins:*}") String origens) {
+    public SecurityConfig(JwtFilter jwtFilter, MetricasTokenFilter metricasTokenFilter, @Value("${api.cors.origins:*}") String origens) {
         this.jwtFilter = jwtFilter;
+        this.metricasTokenFilter = metricasTokenFilter;
         this.origensPermitidas = Arrays.stream(origens.split(",")).map(String::trim).filter(o -> !o.isEmpty()).toList();
     }
 
@@ -47,8 +50,9 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/actuator/health").permitAll()
                 // Documentação da API (só descreve as rotas; as rotas em si continuam protegidas)
                 .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
-                // Métricas e demais rotas do actuator: só ADMIN
-                .requestMatchers("/actuator/**").hasRole("ADMIN")
+                // Métricas e demais rotas do actuator: ADMIN logado, ou o Prometheus com o token de métricas (que só
+                // vale em /actuator/prometheus e /actuator/metrics: veja MetricasTokenFilter)
+                .requestMatchers("/actuator/**").hasAnyRole("ADMIN", MetricasTokenFilter.PERFIL)
                 // Erros de validação (400) são reenviados internamente para /error; sem isso viram 403
                 .requestMatchers("/error").permitAll()
                 // Gerenciar usuários: só ADMIN
@@ -64,7 +68,9 @@ public class SecurityConfig {
             // Sem token (ou com token inválido): 401. Com token válido mas sem permissão: 403.
             .exceptionHandling(erros -> erros.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
             // O leitor de token roda ANTES do filtro de login do Spring Security
-            .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
+            .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
+            // O token fixo do Prometheus é conferido antes do leitor de JWT (que não o entenderia como um JWT)
+            .addFilterBefore(metricasTokenFilter, JwtFilter.class);
 
         return http.build();
     }
