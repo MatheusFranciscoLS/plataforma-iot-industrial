@@ -22,18 +22,98 @@ import static org.awaitility.Awaitility.await;
 
 class ModoDemonstracaoTest {
 
-    @Test
-    void leituraGeradaFicaNasFaixasDoSimuladorPython() {
-        Random random = new Random(42);
-        for (int i = 0; i < 2000; i++) {
-            LeituraRequest l = SimuladorDemo.gerarLeitura("MAQ-02", 1_700_000_000L, random);
+    // Uma hora de leituras (a cada 2 s) de cada máquina, repetida com sementes diferentes
+    private static final int LEITURAS = 1800;
 
-            assertThat(l.idMaquina()).isEqualTo("MAQ-02");
-            assertThat(l.timestamp()).isEqualTo(1_700_000_000L);
-            assertThat(l.temperaturaMotor()).isBetween(60.0, 105.0);
-            assertThat(l.vibracao()).isBetween(0.5, 6.0);
-            assertThat(l.rpm()).isBetween(1200, 3500);
+    private static List<LeituraRequest> simular(String maquina, long semente, int quantidade) {
+        ModeloDeMaquina modelo = SimuladorDemo.modelosDasMaquinas().get(maquina);
+        Random random = new Random(semente);
+        return java.util.stream.IntStream.range(0, quantidade)
+                .mapToObj(i -> modelo.proxima(1_700_000_000L + 2L * i, random))
+                .toList();
+    }
+
+    @Test
+    void leituraTrazAMaquinaEOMomentoCertos() {
+        LeituraRequest l = simular("MAQ-02", 1, 1).get(0);
+
+        assertThat(l.idMaquina()).isEqualTo("MAQ-02");
+        assertThat(l.timestamp()).isEqualTo(1_700_000_000L);
+    }
+
+    @Test
+    void osValoresFicamEmFaixasFisicasRazoaveisSempre() {
+        for (String maquina : SimuladorDemo.MAQUINAS) {
+            for (long semente = 1; semente <= 5; semente++) {
+                for (LeituraRequest l : simular(maquina, semente, 5000)) {
+                    assertThat(l.temperaturaMotor()).isBetween(40.0, 125.0);
+                    assertThat(l.vibracao()).isBetween(0.2, 9.0);
+                    assertThat(l.rpm()).isBetween(1000, 3600);
+                }
+            }
         }
+    }
+
+    @Test
+    void osValoresVariamDevagarEmVezDePularDeUmaLeituraParaOutra() {
+        for (long semente = 1; semente <= 5; semente++) {
+            List<LeituraRequest> leituras = simular("MAQ-01", semente, 5000);
+            for (int i = 1; i < leituras.size(); i++) {
+                assertThat(Math.abs(leituras.get(i).temperaturaMotor() - leituras.get(i - 1).temperaturaMotor()))
+                        .as("salto de temperatura na leitura %d", i).isLessThan(10.0);
+                assertThat(Math.abs(leituras.get(i).vibracao() - leituras.get(i - 1).vibracao()))
+                        .as("salto de vibração na leitura %d", i).isLessThan(1.2);
+            }
+        }
+    }
+
+    @Test
+    void quasePrecisamenteOTempoTodoAMaquinaEstaNormalMasDeVezEmQuandoPassaDoLimite() {
+        int acima = 0, total = 0, passagens = 0;
+        for (long semente = 1; semente <= 10; semente++) {
+            boolean estavaAcima = false;
+            for (LeituraRequest l : simular("MAQ-03", semente, LEITURAS * 4)) {
+                boolean estaAcima = l.temperaturaMotor() > 95.0 || l.vibracao() > 5.0;
+                if (estaAcima) acima++;
+                if (estaAcima && !estavaAcima) passagens++;
+                estavaAcima = estaAcima;
+                total++;
+            }
+        }
+        // 10 sementes x 4 h: a máquina passa dos limites algumas vezes (os alertas) e a maior parte do tempo fica normal
+        assertThat(passagens).as("passagens pelo limite").isBetween(100, 260);
+        assertThat((double) acima / total).as("fração do tempo acima do limite").isBetween(0.005, 0.30);
+    }
+
+    @Test
+    void foraDeUmEpisodioAMaquinaNuncaPassaDoLimite() {
+        for (String maquina : SimuladorDemo.MAQUINAS) {
+            ModeloDeMaquina modelo = SimuladorDemo.modelosDasMaquinas().get(maquina);
+            Random random = new Random(7);
+            int desdeOFimDoEpisodio = 1000; // depois de um episódio, os valores levam um tempo para voltar ao normal
+            for (int i = 0; i < 20000; i++) {
+                boolean estavaEmEpisodio = modelo.emEpisodio();
+                LeituraRequest l = modelo.proxima(i, random);
+                desdeOFimDoEpisodio = (estavaEmEpisodio || modelo.emEpisodio()) ? 0 : desdeOFimDoEpisodio + 1;
+                if (desdeOFimDoEpisodio > 40) {
+                    assertThat(l.temperaturaMotor()).as("%s leitura %d", maquina, i).isLessThanOrEqualTo(95.0);
+                    assertThat(l.vibracao()).as("%s leitura %d", maquina, i).isLessThanOrEqualTo(5.0);
+                }
+            }
+        }
+    }
+
+    @Test
+    void asMaquinasTemNormaisDiferentes() {
+        double mediaMaq1 = simular("MAQ-01", 3, 2000).stream().mapToDouble(LeituraRequest::temperaturaMotor).average().orElseThrow();
+        double mediaMaq3 = simular("MAQ-03", 3, 2000).stream().mapToDouble(LeituraRequest::temperaturaMotor).average().orElseThrow();
+
+        assertThat(mediaMaq3).isGreaterThan(mediaMaq1 + 5.0);
+    }
+
+    @Test
+    void mesmaSementeDaAsMesmasLeituras() {
+        assertThat(simular("MAQ-01", 99, 300)).isEqualTo(simular("MAQ-01", 99, 300));
     }
 
     @Nested
