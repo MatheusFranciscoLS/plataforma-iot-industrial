@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useIdioma } from '@/i18n/idioma-contexto';
 
 const DEMORA_MS = 6000;
 
@@ -8,6 +9,7 @@ const DEMORA_MS = 6000;
  * Ele só existe enquanto o login está em andamento, então some sozinho quando termina.
  */
 export default function AvisoServidorAcordando() {
+  const { t } = useIdioma();
   const [visivel, setVisivel] = useState(false);
 
   useEffect(() => {
@@ -18,7 +20,7 @@ export default function AvisoServidorAcordando() {
   if (!visivel) return null;
   return (
     <p role="status" className="mt-3 rounded border border-linha bg-fundo px-3 py-2 text-sm">
-      O servidor do demo é gratuito e dorme quando ninguém usa. Ele está acordando, o que pode levar até 1 minuto. Pode esperar nesta tela.
+      {t('aviso.acordando')}
     </p>
   );
 }

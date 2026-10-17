@@ -1,3 +1,4 @@
+import { useIdioma } from '@/i18n/idioma-contexto';
 import { formatarNumero } from '@/lib/limites';
 import { OPCOES_PONTOS } from '@/lib/historico';
 import { METRICAS } from '@/lib/metricas';
@@ -9,9 +10,11 @@ import { cn } from '@/lib/utils';
  * e quantos pontos mostrar.
  */
 export default function ControlesDoGrafico({ ocultas, onAlternar, pontos, onPontos, metrica, onMetrica }) {
+  const { t, locale } = useIdioma();
+
   return (
     <div className="flex flex-col items-start gap-3 md:items-end">
-      <div role="group" aria-label="Grandeza do gráfico" className="flex flex-wrap items-center gap-2 text-sm">
+      <div role="group" aria-label={t('controles.grandeza')} className="flex flex-wrap items-center gap-2 text-sm">
         {METRICAS.map((m) => (
           <button
             key={m.id}
@@ -23,12 +26,12 @@ export default function ControlesDoGrafico({ ocultas, onAlternar, pontos, onPont
               metrica.id === m.id ? 'border-aco bg-aco text-painel' : 'border-linha',
             )}
           >
-            {m.rotulo}
+            {t(`metrica.${m.id}`)}
           </button>
         ))}
       </div>
 
-      <div role="group" aria-label="Máquinas no gráfico" className="flex flex-wrap items-center gap-x-2 gap-y-1">
+      <div role="group" aria-label={t('controles.maquinas')} className="flex flex-wrap items-center gap-x-2 gap-y-1">
         {SERIES.map(({ chave, cor, traco }) => {
           const oculta = ocultas.has(chave);
           return (
@@ -54,13 +57,16 @@ export default function ControlesDoGrafico({ ocultas, onAlternar, pontos, onPont
             <svg aria-hidden="true" width="28" height="8" viewBox="0 0 28 8">
               <line x1="0" x2="28" y1="4" y2="4" className="stroke-alarme" strokeWidth="2" strokeDasharray="6 4" />
             </svg>
-            Limite de {formatarNumero(metrica.limite, metrica.casasLimite, metrica.casasLimite)} {metrica.unidade}
+            {t('controles.limite', {
+              valor: formatarNumero(metrica.limite, metrica.casasLimite, metrica.casasLimite, locale),
+              unidade: metrica.unidade,
+            })}
           </span>
         )}
       </div>
 
-      <div role="group" aria-label="Quantidade de pontos no gráfico" className="flex flex-wrap items-center gap-2 text-sm">
-        <span className="text-suave">Mostrar os últimos</span>
+      <div role="group" aria-label={t('controles.pontos')} className="flex flex-wrap items-center gap-2 text-sm">
+        <span className="text-suave">{t('controles.mostrar')}</span>
         {OPCOES_PONTOS.map((n) => (
           <button
             key={n}
@@ -75,7 +81,7 @@ export default function ControlesDoGrafico({ ocultas, onAlternar, pontos, onPont
             {n}
           </button>
         ))}
-        <span className="text-suave">pontos</span>
+        <span className="text-suave">{t('controles.pontosSufixo')}</span>
       </div>
     </div>
   );

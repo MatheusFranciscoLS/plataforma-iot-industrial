@@ -2,14 +2,13 @@ import { CartesianGrid, Line, LineChart, ReferenceLine, ResponsiveContainer, Too
 import { useState } from 'react';
 import { Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useIdioma } from '@/i18n/idioma-contexto';
 import { baixarArquivo, gerarCsv } from '@/lib/csv';
 import { formatarNumero } from '@/lib/limites';
 import { SERIES } from '@/lib/series';
 import ControlesDoGrafico from './ControlesDoGrafico';
 
-const hora = (timestamp) => new Date(timestamp * 1000).toLocaleTimeString('pt-BR');
-
-function BalaoDoGrafico({ active, payload, label, metrica }) {
+function BalaoDoGrafico({ active, payload, label, metrica, hora, locale }) {
   if (!active || !payload?.length) return null;
   return (
     <div className="rounded border border-linha bg-painel px-3 py-2 text-sm shadow-md">
@@ -18,7 +17,7 @@ function BalaoDoGrafico({ active, payload, label, metrica }) {
         <p key={p.dataKey} className="flex justify-between gap-4">
           <span className="text-suave">{p.dataKey}</span>
           <span className={`numero ${metrica.limite !== null && p.value > metrica.limite ? 'text-alarme' : ''}`}>
-            {formatarNumero(p.value, metrica.casas, metrica.casas)} {metrica.unidade}
+            {formatarNumero(p.value, metrica.casas, metrica.casas, locale)} {metrica.unidade}
           </span>
         </p>
       ))}
@@ -28,6 +27,9 @@ function BalaoDoGrafico({ active, payload, label, metrica }) {
 
 /** Gráfico de linhas de uma grandeza (temperatura, vibração ou rotação), uma linha por máquina. */
 export default function GraficoTemperatura({ historico, leituras, metrica, onMetrica, pontos, onPontos }) {
+  const { t, locale } = useIdioma();
+  const hora = (timestamp) => new Date(timestamp * 1000).toLocaleTimeString(locale);
+  const grandeza = t(`metrica.${metrica.id}`);
   const vazio = historico.length === 0;
   const [ocultas, setOcultas] = useState(() => new Set());
   const { limite } = metrica;
@@ -56,7 +58,7 @@ export default function GraficoTemperatura({ historico, leituras, metrica, onMet
       <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
         <div>
           <h2 id="titulo-grafico" className="font-condensada text-2xl font-semibold">
-            {metrica.rotulo} das máquinas
+            {t('grafico.titulo', { grandeza })}
           </h2>
           <Button
             variant="outline"
@@ -66,7 +68,7 @@ export default function GraficoTemperatura({ historico, leituras, metrica, onMet
             onClick={() => baixarArquivo('leituras.csv', gerarCsv(leituras))}
           >
             <Download aria-hidden="true" />
-            Baixar leituras (CSV)
+            {t('grafico.csv')}
           </Button>
         </div>
         <ControlesDoGrafico
@@ -80,15 +82,22 @@ export default function GraficoTemperatura({ historico, leituras, metrica, onMet
       </div>
 
       <p id="descricao-grafico" className="sr-only">
-        Gráfico de linhas com {metrica.rotulo.toLowerCase()} de cada máquina nos últimos instantes
-        {limite !== null ? ` e a linha do limite de ${formatarNumero(limite, metrica.casasLimite, metrica.casasLimite)} ${metrica.unidade}` : ''}. Os valores atuais estão nos cartões
-        das máquinas.
+        {t('grafico.descricao', {
+          grandeza: grandeza.toLowerCase(),
+          limite:
+            limite !== null
+              ? t('grafico.descricaoLimite', {
+                  valor: formatarNumero(limite, metrica.casasLimite, metrica.casasLimite, locale),
+                  unidade: metrica.unidade,
+                })
+              : '',
+        })}
       </p>
 
       <div className="relative mt-4 h-72 w-full md:h-96">
         {vazio && (
           <p className="absolute inset-0 z-10 flex items-center justify-center text-sm text-suave">
-            O gráfico começa a ser desenhado quando chegarem as primeiras leituras.
+            {t('grafico.vazio')}
           </p>
         )}
         <ResponsiveContainer>
@@ -106,13 +115,13 @@ export default function GraficoTemperatura({ historico, leituras, metrica, onMet
             />
             <YAxis
               domain={dominio}
-              tickFormatter={(v) => formatarNumero(v, metrica.casasEixo)}
+              tickFormatter={(v) => formatarNumero(v, metrica.casasEixo, 0, locale)}
               width={metrica.id === 'rpm' ? 52 : 44}
               stroke="rgb(var(--suave))"
               tick={{ fill: 'rgb(var(--suave))', fontSize: 12 }}
             />
             {limite !== null && <ReferenceLine y={limite} stroke="rgb(var(--alarme))" strokeDasharray="6 4" strokeWidth={1.5} />}
-            <Tooltip content={<BalaoDoGrafico metrica={metrica} />} cursor={{ stroke: 'rgb(var(--suave))', strokeDasharray: '3 3' }} />
+            <Tooltip content={<BalaoDoGrafico metrica={metrica} hora={hora} locale={locale} />} cursor={{ stroke: 'rgb(var(--suave))', strokeDasharray: '3 3' }} />
             {SERIES.map(({ chave, cor, traco }) => (
               <Line
                 key={chave}
