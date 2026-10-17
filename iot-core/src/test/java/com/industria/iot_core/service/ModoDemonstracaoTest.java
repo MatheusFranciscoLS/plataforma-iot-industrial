@@ -34,6 +34,48 @@ class ModoDemonstracaoTest {
     }
 
     @Test
+    void aFalhaProvocadaFazAMaquinaPassarDoLimiteLogoEDepoisVoltarAoNormal() {
+        ModeloDeMaquina modelo = SimuladorDemo.modelosDasMaquinas().get("MAQ-01");
+        Random random = new Random(5);
+        for (int i = 0; i < 100; i++) modelo.proxima(i, random); // aquecimento
+        for (int i = 0; modelo.emEpisodio() && i < 100; i++) modelo.proxima(i, random); // se um episódio sorteado estava no meio, deixa acabar
+        for (int i = 0; i < 80; i++) modelo.proxima(i, random); // e a máquina volta ao normal
+
+        modelo.forcarEpisodio(TipoDeFalha.AMBAS, 30);
+        double maxTemp = 0, maxVib = 0;
+        for (int i = 0; i < 30; i++) {
+            LeituraRequest l = modelo.proxima(100 + i, random);
+            maxTemp = Math.max(maxTemp, l.temperaturaMotor());
+            maxVib = Math.max(maxVib, l.vibracao());
+        }
+        assertThat(maxTemp).as("temperatura durante a falha").isGreaterThan(95.0);
+        assertThat(maxVib).as("vibração durante a falha").isGreaterThan(5.0);
+        assertThat(modelo.emEpisodio()).isFalse(); // acabou sozinha
+
+        for (int i = 0; i < 80; i++) modelo.proxima(200 + i, random); // volta ao normal
+        LeituraRequest depois = modelo.proxima(300, random);
+        assertThat(depois.temperaturaMotor()).isLessThan(95.0);
+        assertThat(depois.vibracao()).isLessThan(5.0);
+    }
+
+    @Test
+    void falhaSoDeTemperaturaNaoMexeNaVibracao() {
+        ModeloDeMaquina modelo = SimuladorDemo.modelosDasMaquinas().get("MAQ-02");
+        Random random = new Random(11);
+        for (int i = 0; i < 100; i++) modelo.proxima(i, random);
+
+        modelo.forcarEpisodio(TipoDeFalha.TEMPERATURA, 30);
+        double maxTemp = 0, maxVib = 0;
+        for (int i = 0; i < 30; i++) {
+            LeituraRequest l = modelo.proxima(100 + i, random);
+            maxTemp = Math.max(maxTemp, l.temperaturaMotor());
+            maxVib = Math.max(maxVib, l.vibracao());
+        }
+        assertThat(maxTemp).isGreaterThan(95.0);
+        assertThat(maxVib).isLessThan(5.0);
+    }
+
+    @Test
     void leituraTrazAMaquinaEOMomentoCertos() {
         LeituraRequest l = simular("MAQ-02", 1, 1).get(0);
 
