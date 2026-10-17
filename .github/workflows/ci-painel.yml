@@ -40,3 +40,7 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      # Notas mínimas de acessibilidade, boas práticas, SEO e desempenho da página inicial (veja painel-react/lighthouserc.json)
+      - name: Lighthouse
+        run: npx --yes @lhci/cli@0.15.1 autorun --collect.settings.chromeFlags="--no-sandbox"

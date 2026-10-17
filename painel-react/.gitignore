@@ -25,3 +25,4 @@ dist-ssr
 
 # Endereços locais: use .env.example como modelo
 .env
+.lighthouseci

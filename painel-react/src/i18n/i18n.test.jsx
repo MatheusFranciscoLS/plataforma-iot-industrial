@@ -72,7 +72,7 @@ describe('escolha do idioma', () => {
     expect(idiomaNaTela()).toBe('pt-BR');
     expect(document.title).toBe('Monitoramento da fábrica');
 
-    await userEvent.setup().click(screen.getByRole('button', { name: 'Mudar para inglês' }));
+    await userEvent.setup().click(screen.getByRole('button', { name: 'EN: mudar para inglês' }));
 
     expect(screen.getByRole('heading', { name: 'Factory monitoring', level: 1 })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'How a reading reaches the screen' })).toBeInTheDocument();
@@ -81,7 +81,7 @@ describe('escolha do idioma', () => {
     expect(idiomaNaTela()).toBe('en');
     expect(document.title).toBe('Factory monitoring');
 
-    await userEvent.setup().click(screen.getByRole('button', { name: 'Switch to Portuguese' }));
+    await userEvent.setup().click(screen.getByRole('button', { name: 'PT: switch to Portuguese' }));
     expect(screen.getByLabelText('Usuário')).toBeInTheDocument();
     expect(localStorage.getItem('idioma')).toBe('pt');
   });
