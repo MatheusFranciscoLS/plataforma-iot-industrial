@@ -7,6 +7,7 @@ import { agruparHistorico, MAX_PONTOS, serieDaMaquina } from '@/lib/historico';
 import { METRICA_PADRAO } from '@/lib/metricas';
 import { avaliarMaquina, LIMITE_TEMPERATURA, LIMITE_VIBRACAO, formatarNumero, MAQUINAS, resumirFabrica } from '@/lib/limites';
 import AlertasRecentes from './AlertasRecentes';
+import DetalheDaMaquina from './DetalheDaMaquina';
 import Cabecalho from './Cabecalho';
 import LinhaMaquina from './LinhaMaquina';
 import ResumoFabrica from './ResumoFabrica';
@@ -17,6 +18,7 @@ const GraficoTemperatura = lazy(() => import('./GraficoTemperatura'));
 export default function Painel({ token, tema, onAlternarTema, onSair, onSessaoInvalida }) {
   const [pontos, setPontos] = useState(MAX_PONTOS);
   const [metrica, setMetrica] = useState(METRICA_PADRAO);
+  const [maquinaAberta, setMaquinaAberta] = useState(null);
   const { historico, leituras, statusAtual, conexao, erroHistorico } = useTelemetria(token, onSessaoInvalida, pontos);
   const historicoDoGrafico = useMemo(() => agruparHistorico(leituras, pontos, metrica.id), [leituras, pontos, metrica]);
   const { alertas, erro: erroAlertas } = useAlertas(token, onSessaoInvalida);
@@ -46,6 +48,7 @@ export default function Painel({ token, tema, onAlternarTema, onSair, onSessaoIn
               avaliacao={avaliacoes[i]}
               agora={agora}
               serie={serieDaMaquina(historico, nome)}
+            onDetalhes={setMaquinaAberta}
             />
           ))}
         </div>
@@ -69,6 +72,15 @@ export default function Painel({ token, tema, onAlternarTema, onSair, onSessaoIn
 
         <AlertasRecentes alertas={alertas} erro={erroAlertas} />
       </main>
+
+      {maquinaAberta && (
+        <DetalheDaMaquina
+          token={token}
+          maquina={maquinaAberta}
+          aoFechar={() => setMaquinaAberta(null)}
+          onSessaoInvalida={onSessaoInvalida}
+        />
+      )}
 
       <footer className="mt-8 flex flex-wrap justify-between gap-x-6 gap-y-1 border-t border-linha pt-4 text-sm text-suave">
         <p>
