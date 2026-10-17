@@ -45,7 +45,7 @@ class MigracoesNoPostgresTest {
         flyway("novo", false).migrate();
         JdbcTemplate jdbc = bancoNoEsquema("novo");
 
-        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM flyway_schema_history WHERE success", Integer.class)).isEqualTo(4);
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM flyway_schema_history WHERE success AND version IS NOT NULL", Integer.class)).isEqualTo(4);
         assertThat(jdbc.queryForList("SELECT table_name FROM information_schema.tables WHERE table_schema = 'novo'", String.class))
                 .contains("usuario", "registro_sensor", "alerta", "limite_maquina");
     }
