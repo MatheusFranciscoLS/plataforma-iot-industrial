@@ -95,6 +95,20 @@ export async function provocarFalha(token, maquina) {
 }
 
 /**
+ * Troca a senha de quem está logado. Erros com `status`: 400 (senha atual errada), 423 (usuário protegido no demo)
+ * e 429 (muitas tentativas).
+ */
+export async function trocarMinhaSenha(token, senhaAtual, novaSenha) {
+  await chamar(token, '/api/auth/senha', { method: 'PUT', corpo: { senhaAtual, novaSenha } });
+}
+
+/** Pede um token novo (mais 2 horas) a quem ainda tem um válido. Devolve o token. Falha com SessaoInvalidaError se a API recusar (sessão longa demais, por exemplo). */
+export async function renovarToken(token) {
+  const { token: novo } = await (await chamar(token, '/api/auth/renovar', { method: 'POST' })).json();
+  return novo;
+}
+
+/**
  * Série de um período ('1h', '6h' ou '24h'): média e máximo por faixa de tempo, calculados no servidor.
  * `maquina` é opcional (padrão: todas). Resposta: { periodo, faixaSegundos, de, ate, maquinas: [{ idMaquina, pontos }] }.
  */

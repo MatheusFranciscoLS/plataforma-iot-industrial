@@ -1,4 +1,4 @@
-import { Languages, LogOut, Moon, Sun, Users } from 'lucide-react';
+import { KeyRound, Languages, LogOut, Moon, Sun, Users } from 'lucide-react';
 import { useIdioma } from '@/i18n/idioma-contexto';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -15,8 +15,11 @@ function Marca() {
   );
 }
 
-/** `usuario` e `perfil` mostram quem está logado; `onUsuarios` (só para o administrador) abre a gerência de usuários. */
-export default function Cabecalho({ conexao, tema, onAlternarTema, onSair, usuario = null, perfil = null, onUsuarios }) {
+/**
+ * `usuario` e `perfil` mostram quem está logado; `onUsuarios` (só para o administrador) abre a gerência de usuários
+ * e `onTrocarSenha` abre a troca da própria senha.
+ */
+export default function Cabecalho({ conexao, tema, onAlternarTema, onSair, usuario = null, perfil = null, onUsuarios, onTrocarSenha }) {
   const { t, alternarIdioma } = useIdioma();
   const rotuloTema = tema === 'escuro' ? t('tema.claro') : t('tema.escuro');
 
@@ -42,6 +45,17 @@ export default function Cabecalho({ conexao, tema, onAlternarTema, onSair, usuar
             <Users aria-hidden="true" />
             {t('usuarios.botao')}
           </Button>
+        )}
+
+        {onTrocarSenha && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="outline" size="icon" onClick={onTrocarSenha} aria-label={t('senha.botao')}>
+                <KeyRound aria-hidden="true" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{t('senha.botao')}</TooltipContent>
+          </Tooltip>
         )}
 
         <Tooltip>
