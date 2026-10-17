@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils';
  * Controles do gráfico: qual grandeza desenhar, quais máquinas aparecem (a legenda é clicável)
  * e quantos pontos mostrar.
  */
-export default function ControlesDoGrafico({ ocultas, onAlternar, pontos, onPontos, metrica, onMetrica }) {
+export default function ControlesDoGrafico({ ocultas, onAlternar, pontos, onPontos, metrica, onMetrica, limites = [metrica.limite] }) {
   const { t, locale } = useIdioma();
 
   return (
@@ -58,7 +58,7 @@ export default function ControlesDoGrafico({ ocultas, onAlternar, pontos, onPont
               <line x1="0" x2="28" y1="4" y2="4" className="stroke-alarme" strokeWidth="2" strokeDasharray="6 4" />
             </svg>
             {t('controles.limite', {
-              valor: formatarNumero(metrica.limite, metrica.casasLimite, metrica.casasLimite, locale),
+              valor: limites.map((l) => formatarNumero(l, metrica.casasLimite, metrica.casasLimite, locale)).join(' / '),
               unidade: metrica.unidade,
             })}
           </span>

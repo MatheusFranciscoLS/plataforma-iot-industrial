@@ -1,4 +1,4 @@
-import { motivosDaLeitura } from './limites';
+import { LIMITES_PADRAO, motivosDaLeitura } from './limites';
 
 function resumirCampo(leituras, campo) {
   const valores = leituras.map((l) => l[campo]).filter((v) => typeof v === 'number');
@@ -11,11 +11,11 @@ function resumirCampo(leituras, campo) {
  * Números de uma máquina a partir das leituras dela: mínimo, média e máximo de cada grandeza,
  * o período coberto e quantas leituras passaram de algum limite. Devolve null se não há leituras.
  */
-export function resumirLeituras(leituras) {
+export function resumirLeituras(leituras, limites = LIMITES_PADRAO) {
   if (leituras.length === 0) return null;
 
   const momentos = leituras.map((l) => l.timestamp);
-  const acima = leituras.filter((l) => motivosDaLeitura(l).length > 0).length;
+  const acima = leituras.filter((l) => motivosDaLeitura(l, undefined, limites).length > 0).length;
 
   return {
     quantidade: leituras.length,

@@ -19,7 +19,7 @@ O CI (`.github/workflows`) roda tudo isso a cada push na `main` e a cada pull re
 
 ## Regras do projeto
 
-- Os limites de alerta são 95 °C e 5,0 mm/s (`painel-react/src/lib/limites.js`).
+- Os limites de alerta padrão são 95 °C e 5,0 mm/s (`alerta.limite-*` na API e `painel-react/src/lib/limites.js`); cada máquina pode ter os seus pela API (`/api/limites`), e o painel os lê de lá.
 - O corpo do `POST /api/sensores` entra por `LeituraRequest`; nunca receber a entidade `RegistroSensor` direto (o sensor poderia escolher o `id` e sobrescrever registros).
 - Segredos (chave do JWT, senhas) não devem ir para o repositório nem para logs; hoje alguns valores de demonstração ainda estão em `application.properties` e `docker-compose.yml`.
 - Os testes da API usam H2 em memória e RabbitMQ simulado; não dependem de Docker.
