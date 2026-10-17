@@ -64,3 +64,25 @@ test('sair volta para a página inicial', async ({ page }) => {
 
   await expect(page.getByRole('button', { name: 'Ver o painel de demonstração' })).toBeVisible();
 });
+
+test('enquanto o servidor acorda, a demonstração mostra uma simulação e depois troca pelos dados reais', async ({ page }) => {
+  // Faz de conta que o servidor gratuito está dormindo: o login só responde depois de 4 s.
+  await page.route('**/api/auth/login', async (rota) => {
+    await new Promise((resolve) => setTimeout(resolve, 4000));
+    await rota.continue().catch(() => {}); // se o teste já terminou, não há mais página para responder
+  });
+
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Ver o painel de demonstração' }).click();
+
+  await expect(page.getByRole('heading', { name: 'Monitoramento da fábrica', level: 1 })).toBeVisible();
+  await expect(page.locator('header').getByText('Simulação no navegador')).toBeVisible();
+  await expect(page.getByText(/simulação feita no seu navegador/)).toBeVisible();
+  for (const maquina of ['MAQ-01', 'MAQ-02', 'MAQ-03']) {
+    await expect(page.getByRole('article', { name: new RegExp(`^${maquina}:`) })).toBeVisible();
+  }
+
+  // Quando o login responde, a simulação some e entram os dados reais.
+  await expect(page.locator('header').getByText('Ao vivo')).toBeVisible();
+  await expect(page.getByText(/simulação feita no seu navegador/)).toHaveCount(0);
+});

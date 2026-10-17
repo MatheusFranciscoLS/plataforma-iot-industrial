@@ -9,7 +9,11 @@ import { ACESSO_DEMO } from '@/lib/demo';
 import AvisoServidorAcordando from './AvisoServidorAcordando';
 import FluxoDoSistema from './FluxoDoSistema';
 
-export default function Login({ aviso, onEntrar }) {
+/**
+ * `onDemo`, se existir, assume o botão de demonstração: o app mostra a tela simulada na hora e faz o login por trás.
+ * Sem ele, o botão faz o login aqui mesmo. `erroExterno` é um erro que o app quer mostrar nesta tela (o login da demonstração falhou).
+ */
+export default function Login({ aviso, onEntrar, onDemo, erroExterno = '' }) {
   const { t, alternarIdioma } = useIdioma();
   const [usuario, setUsuario] = useState('');
   const [senha, setSenha] = useState('');
@@ -59,7 +63,7 @@ export default function Login({ aviso, onEntrar }) {
             </p>
           )}
 
-          <Button type="button" size="lg" className="mt-4 w-full" disabled={enviando} onClick={() => entrar(ACESSO_DEMO.usuario, ACESSO_DEMO.senha)}>
+          <Button type="button" size="lg" className="mt-4 w-full" disabled={enviando} onClick={() => (onDemo ? onDemo() : entrar(ACESSO_DEMO.usuario, ACESSO_DEMO.senha))}>
             {enviando ? <Loader2 aria-hidden="true" className="animate-spin" /> : <Play aria-hidden="true" />}
             {enviando ? t('login.entrando') : t('login.demo')}
           </Button>
@@ -86,9 +90,9 @@ export default function Login({ aviso, onEntrar }) {
               <Input id="senha" type="password" autoComplete="current-password" value={senha} onChange={(e) => setSenha(e.target.value)} required />
             </div>
 
-            {erro && (
+            {(erro || erroExterno) && (
               <p role="alert" className="mt-4 text-sm font-medium text-alarme">
-                {erro}
+                {erro || erroExterno}
               </p>
             )}
 

@@ -36,6 +36,19 @@ for (const esquema of ['light', 'dark']) {
       await page.getByRole('button', { name: 'Ver o painel de demonstração' }).click();
       await expect(page.getByRole('article', { name: /^MAQ-01:/ })).toBeVisible();
       await expect(page.getByRole('heading', { name: 'Monitoramento da fábrica', level: 1 })).toBeVisible();
+      await expect(page.locator('header').getByText('Ao vivo')).toBeVisible(); // o painel de verdade, não a simulação
+      await conferir(page);
+    });
+
+    test('simulação enquanto o servidor acorda', async ({ page }) => {
+      await page.route('**/api/auth/login', async (rota) => {
+        await new Promise((resolve) => setTimeout(resolve, 15_000));
+        await rota.continue().catch(() => {}); // se o teste já terminou, não há mais página para responder
+      });
+      await page.goto('/');
+      await page.getByRole('button', { name: 'Ver o painel de demonstração' }).click();
+      await expect(page.locator('header').getByText('Simulação no navegador')).toBeVisible();
+      await expect(page.getByRole('article', { name: /^MAQ-01:/ })).toBeVisible();
       await conferir(page);
     });
   });
