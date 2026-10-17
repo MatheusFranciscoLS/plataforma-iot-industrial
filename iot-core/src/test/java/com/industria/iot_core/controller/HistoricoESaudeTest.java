@@ -1,5 +1,6 @@
 package com.industria.iot_core.controller;
 
+import com.industria.iot_core.model.Usuario;
 import com.industria.iot_core.model.RegistroSensor;
 import com.industria.iot_core.repository.RegistroSensorRepository;
 import com.industria.iot_core.security.TokenService;
@@ -50,7 +51,7 @@ class HistoricoESaudeTest {
 
     private ResultActions buscar(String consulta) throws Exception {
         return mockMvc.perform(get("/api/sensores" + consulta)
-                .header("Authorization", "Bearer " + tokenService.gerarToken("admin")));
+                .header("Authorization", "Bearer " + tokenService.gerarToken("admin", Usuario.Perfil.ADMIN)));
     }
 
     @Test
@@ -88,7 +89,7 @@ class HistoricoESaudeTest {
 
     @Test
     void historicoContinuaExigindoToken() throws Exception {
-        mockMvc.perform(get("/api/sensores?maquina=MAQ-01")).andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/sensores?maquina=MAQ-01")).andExpect(status().isUnauthorized());
     }
 
     @Test

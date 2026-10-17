@@ -1,5 +1,6 @@
 package com.industria.iot_core.security;
 
+import com.industria.iot_core.model.Usuario;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
@@ -32,14 +33,14 @@ class TokenServiceTest {
 
     @Test
     void tokenGeradoTrazOUsuarioNoSubject() {
-        String token = tokenService.gerarToken("admin");
+        String token = tokenService.gerarToken("admin", Usuario.Perfil.ADMIN);
 
         assertThat(ler(token, CHAVE).getSubject()).isEqualTo("admin");
     }
 
     @Test
     void tokenExpiraEmDuasHoras() {
-        String token = tokenService.gerarToken("admin");
+        String token = tokenService.gerarToken("admin", Usuario.Perfil.ADMIN);
 
         Claims claims = ler(token, CHAVE);
         long duracao = claims.getExpiration().getTime() - claims.getIssuedAt().getTime();
@@ -50,7 +51,7 @@ class TokenServiceTest {
 
     @Test
     void tokenNaoEhValidoComOutraChave() {
-        String token = tokenService.gerarToken("admin");
+        String token = tokenService.gerarToken("admin", Usuario.Perfil.ADMIN);
 
         assertThatThrownBy(() -> ler(token, "outra-chave-completamente-diferente-9876543210"))
                 .isInstanceOf(JwtException.class);

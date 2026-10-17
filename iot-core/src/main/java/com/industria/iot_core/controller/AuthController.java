@@ -61,7 +61,7 @@ public class AuthController {
         if (usuario.isPresent() && senhaConfere) {
             limite.limpar(chave);
             log.info("Login aprovado para o usuário {}", nome);
-            return ResponseEntity.ok(new LoginResponse(tokenService.gerarToken(nome)));
+            return ResponseEntity.ok(new LoginResponse(tokenService.gerarToken(usuario.get().getNome(), usuario.get().getPerfil())));
         }
 
         limite.registrarFalha(chave);

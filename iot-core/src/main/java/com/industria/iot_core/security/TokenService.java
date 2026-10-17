@@ -1,5 +1,6 @@
 package com.industria.iot_core.security;
 
+import com.industria.iot_core.model.Usuario.Perfil;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
@@ -20,9 +21,10 @@ public class TokenService {
         return Keys.hmacShaKeyFor(CHAVE_SECRETA.getBytes(StandardCharsets.UTF_8));
     }
 
-    public String gerarToken(String usuario) {
+    public String gerarToken(String usuario, Perfil perfil) {
         return Jwts.builder()
                 .subject(usuario) // Nome do usuário dono do token
+                .claim("perfil", perfil.name()) // O que ele pode fazer (o painel também lê, para esconder botões)
                 .issuedAt(new Date()) // Data e hora de emissão
                 // Validade do token: 2 horas (em milissegundos)
                 .expiration(new Date(System.currentTimeMillis() + 7200000))

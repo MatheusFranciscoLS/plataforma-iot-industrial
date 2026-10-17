@@ -1,5 +1,6 @@
 package com.industria.iot_core.controller;
 
+import com.industria.iot_core.model.Usuario;
 import com.industria.iot_core.model.Alerta;
 import com.industria.iot_core.repository.AlertaRepository;
 import com.industria.iot_core.security.TokenService;
@@ -38,7 +39,7 @@ class LimitesEReconhecimentoTest {
     @MockitoBean RabbitTemplate rabbitTemplate;
 
     private String token(String usuario) {
-        return "Bearer " + tokenService.gerarToken(usuario);
+        return "Bearer " + tokenService.gerarToken(usuario, Usuario.Perfil.ADMIN);
     }
 
     private void enviar(String maquina, long timestamp, double temperatura, double vibracao) throws Exception {
@@ -139,10 +140,10 @@ class LimitesEReconhecimentoTest {
 
     @Test
     void limitesExigemToken() throws Exception {
-        mockMvc.perform(get("/api/limites")).andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/limites")).andExpect(status().isUnauthorized());
         mockMvc.perform(put("/api/limites/MAQ-01/TEMPERATURA").contentType(MediaType.APPLICATION_JSON).content("{\"limite\": 80}"))
-                .andExpect(status().isForbidden());
-        mockMvc.perform(delete("/api/limites/MAQ-01/TEMPERATURA")).andExpect(status().isForbidden());
+                .andExpect(status().isUnauthorized());
+        mockMvc.perform(delete("/api/limites/MAQ-01/TEMPERATURA")).andExpect(status().isUnauthorized());
     }
 
     // ---- reconhecimento e filtros ----
@@ -177,7 +178,7 @@ class LimitesEReconhecimentoTest {
 
     @Test
     void reconhecerExigeToken() throws Exception {
-        mockMvc.perform(post("/api/alertas/1/reconhecer")).andExpect(status().isForbidden());
+        mockMvc.perform(post("/api/alertas/1/reconhecer")).andExpect(status().isUnauthorized());
     }
 
     @Test

@@ -1,5 +1,6 @@
 package com.industria.iot_core.security;
 
+import com.industria.iot_core.model.Usuario;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import jakarta.servlet.FilterChain;
@@ -50,7 +51,7 @@ class JwtFilterTest {
 
     @Test
     void tokenValidoAutenticaOUsuario() throws Exception {
-        request.addHeader("Authorization", "Bearer " + tokenService.gerarToken("admin"));
+        request.addHeader("Authorization", "Bearer " + tokenService.gerarToken("admin", Usuario.Perfil.ADMIN));
 
         filtro.doFilter(request, response, chain);
 
@@ -82,7 +83,7 @@ class JwtFilterTest {
     void tokenAssinadoComOutraChaveNaoAutentica() throws Exception {
         TokenService outroEmissor = new TokenService();
         ReflectionTestUtils.setField(outroEmissor, "CHAVE_SECRETA", "outra-chave-completamente-diferente-9876543210");
-        request.addHeader("Authorization", "Bearer " + outroEmissor.gerarToken("admin"));
+        request.addHeader("Authorization", "Bearer " + outroEmissor.gerarToken("admin", Usuario.Perfil.ADMIN));
 
         filtro.doFilter(request, response, chain);
 
@@ -92,7 +93,7 @@ class JwtFilterTest {
 
     @Test
     void tokenAdulteradoNaoAutentica() throws Exception {
-        String token = tokenService.gerarToken("admin");
+        String token = tokenService.gerarToken("admin", Usuario.Perfil.ADMIN);
         // Troca o primeiro caractere da assinatura (o último caractere tem bits sobrando e pode não mudar nada)
         int inicioAssinatura = token.lastIndexOf('.') + 1;
         char original = token.charAt(inicioAssinatura);
@@ -125,7 +126,7 @@ class JwtFilterTest {
 
     @Test
     void cabecalhoSemPrefixoBearerEhIgnorado() throws Exception {
-        request.addHeader("Authorization", tokenService.gerarToken("admin"));
+        request.addHeader("Authorization", tokenService.gerarToken("admin", Usuario.Perfil.ADMIN));
 
         filtro.doFilter(request, response, chain);
 

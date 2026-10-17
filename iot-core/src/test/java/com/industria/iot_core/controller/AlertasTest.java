@@ -1,5 +1,6 @@
 package com.industria.iot_core.controller;
 
+import com.industria.iot_core.model.Usuario;
 import com.industria.iot_core.model.Alerta;
 import com.industria.iot_core.repository.AlertaRepository;
 import com.industria.iot_core.security.TokenService;
@@ -52,7 +53,7 @@ class AlertasTest {
         }
 
         private ResultActions listar(String consulta) throws Exception {
-            return mockMvc.perform(get("/api/alertas" + consulta).header("Authorization", "Bearer " + tokenService.gerarToken("admin")));
+            return mockMvc.perform(get("/api/alertas" + consulta).header("Authorization", "Bearer " + tokenService.gerarToken("admin", Usuario.Perfil.ADMIN)));
         }
 
         @Test
@@ -117,7 +118,7 @@ class AlertasTest {
 
         @Test
         void listaExigeToken() throws Exception {
-            mockMvc.perform(get("/api/alertas")).andExpect(status().isForbidden());
+            mockMvc.perform(get("/api/alertas")).andExpect(status().isUnauthorized());
         }
     }
 
