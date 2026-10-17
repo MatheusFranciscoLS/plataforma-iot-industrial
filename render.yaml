@@ -1,0 +1,72 @@
+# Blueprint do Render: descreve a API Java e o gateway Node para criar os dois de uma vez.
+# Passo a passo completo em docs/colocar-no-ar.md.
+#
+# Tudo no plano gratuito (custo zero). Os valores marcados com "sync: false" são segredos:
+# o Render pergunta por eles na hora de criar e eles NÃO ficam neste arquivo.
+
+envVarGroups:
+  # A mesma chave nos dois serviços: a API assina o token e o gateway confere a assinatura.
+  - name: iot-segredos
+    envVars:
+      - key: JWT_SECRET
+        generateValue: true
+
+services:
+  - type: web
+    name: iot-core-api
+    runtime: docker
+    plan: free
+    region: oregon
+    dockerfilePath: ./iot-core/Dockerfile
+    dockerContext: ./iot-core
+    healthCheckPath: /actuator/health
+    autoDeploy: true
+    envVars:
+      - fromGroup: iot-segredos
+      # Banco (Supabase). Formato: jdbc:postgresql://HOST:PORTA/postgres?sslmode=require
+      - key: DB_URL
+        sync: false
+      - key: DB_USER
+        sync: false
+      - key: DB_PASS
+        sync: false
+      # Fila (CloudAMQP). Formato: amqps://USUARIO:SENHA@HOST/VHOST
+      - key: RABBITMQ_URL
+        sync: false
+      # Endereço do painel na Vercel, para o navegador poder chamar a API (CORS).
+      - key: CORS_ORIGINS
+        sync: false
+      # Senhas dos usuários criados na primeira subida.
+      - key: ADMIN_SENHA
+        sync: false
+      - key: DEMO_SENHA
+        sync: false
+      # Modo demonstração: a própria API gera as leituras e apaga o que tem mais de 24 horas.
+      - key: SIMULADOR_ATIVO
+        value: "true"
+      - key: RETENCAO_HORAS
+        value: "24"
+      - key: PROTEGER_USUARIOS
+        value: "true"
+      - key: DOCS_ATIVAS
+        value: "true"
+      # Opcional: aviso de alerta no Discord ou Slack. Deixe em branco para não usar.
+      - key: ALERTA_WEBHOOK_URL
+        sync: false
+
+  - type: web
+    name: iot-gateway-node
+    runtime: docker
+    plan: free
+    region: oregon
+    dockerfilePath: ./servidor-node/Dockerfile
+    dockerContext: ./servidor-node
+    healthCheckPath: /saude
+    autoDeploy: true
+    envVars:
+      - fromGroup: iot-segredos
+      - key: RABBITMQ_URL
+        sync: false
+      # Endereço do painel na Vercel (mesmo valor de CORS_ORIGINS da API).
+      - key: CORS_ORIGIN
+        sync: false

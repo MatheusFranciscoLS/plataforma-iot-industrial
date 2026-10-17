@@ -143,6 +143,10 @@ Para subir também o Prometheus e o Grafana (métricas da API, opcional):
 docker compose --profile observabilidade up -d
 ```
 
+## ☁️ Colocar no ar (custo zero)
+
+O arquivo [`render.yaml`](render.yaml) descreve a API e o gateway para o Render criar de uma vez. O passo a passo completo, com banco no Supabase, fila no CloudAMQP e painel na Vercel, está em [docs/colocar-no-ar.md](docs/colocar-no-ar.md).
+
 ---
 
 # 🌐 Serviços Disponíveis
