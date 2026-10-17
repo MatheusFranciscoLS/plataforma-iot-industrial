@@ -4,6 +4,7 @@ import Login from '@/components/Login';
 import Painel from '@/components/Painel';
 import { useIdioma } from '@/i18n/idioma-contexto';
 import ProvedorDeIdioma from '@/i18n/ProvedorDeIdioma';
+import { useRenovacaoDoToken } from '@/hooks/useRenovacaoDoToken';
 import { useTema } from '@/hooks/useTema';
 import { lerExpiracao, lerTokenSalvo, salvarToken } from '@/lib/token';
 
@@ -26,6 +27,13 @@ function Aplicacao() {
     setSessaoTerminou(false);
     setToken(novoToken);
   };
+
+  // Antes de o token vencer, pede um novo (a pessoa que está usando o painel não é desconectada a cada 2 horas).
+  // O token novo troca o antigo sem passar pelo login e sem mexer na tela.
+  useRenovacaoDoToken(token, (novoToken) => {
+    salvarToken(novoToken);
+    setToken(novoToken);
+  });
 
   // Quando o token vence, volta para o login sem esperar o servidor recusar.
   useEffect(() => {

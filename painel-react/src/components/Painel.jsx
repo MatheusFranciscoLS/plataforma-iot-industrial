@@ -19,6 +19,7 @@ import GerenciarUsuarios from './GerenciarUsuarios';
 import LimitesDeAlerta from './LimitesDeAlerta';
 import LinhaMaquina from './LinhaMaquina';
 import ResumoFabrica from './ResumoFabrica';
+import TrocarMinhaSenha from './TrocarMinhaSenha';
 
 // O Recharts é a maior parte do código da página; ele só é baixado depois que o resto já apareceu.
 const GraficoTemperatura = lazy(() => import('./GraficoTemperatura'));
@@ -32,6 +33,7 @@ export default function Painel({ token, tema, onAlternarTema, onSair, onSessaoIn
   const [maquinaAberta, setMaquinaAberta] = useState(null);
   const [limitesAbertos, setLimitesAbertos] = useState(false);
   const [usuariosAbertos, setUsuariosAbertos] = useState(false);
+  const [senhaAberta, setSenhaAberta] = useState(false);
   // O perfil do token só decide o que mostrar; quem barra a ação de verdade é a API.
   const perfil = lerPerfil(token);
   const usuario = lerUsuario(token);
@@ -75,6 +77,7 @@ export default function Painel({ token, tema, onAlternarTema, onSair, onSessaoIn
         usuario={usuario}
         perfil={perfil}
         onUsuarios={perfil === 'ADMIN' ? () => setUsuariosAbertos(true) : undefined}
+        onTrocarSenha={() => setSenhaAberta(true)}
       />
 
       <main>
@@ -146,6 +149,8 @@ export default function Painel({ token, tema, onAlternarTema, onSair, onSessaoIn
           onSessaoInvalida={onSessaoInvalida}
         />
       )}
+
+      {senhaAberta && <TrocarMinhaSenha token={token} aoFechar={() => setSenhaAberta(false)} onSessaoInvalida={onSessaoInvalida} />}
 
       {usuariosAbertos && (
         <GerenciarUsuarios
