@@ -5,7 +5,7 @@
 - **Escrita:** sensores mandando leituras (`POST /api/sensores`), de 10 até 100 por segundo.
 - **Leitura:** 20 painéis abertos consultando histórico, alertas e a série da última hora.
 
-Os limites ficam no próprio script (`thresholds`): menos de 1% de falhas e p95 abaixo de 500 ms (1 s na série por período).
+Os limites ficam no próprio script (`thresholds`): menos de 1% de falhas e p95 abaixo de 100 ms (250 ms na série por período).
 Se a API piorar, o teste falha.
 
 ## Rodar no GitHub

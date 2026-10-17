@@ -42,11 +42,11 @@ export const options = {
     http_req_failed: ['rate<0.01'],
     checks: ['rate>0.99'],
     // Escrever uma leitura (grava no banco e avisa a fila).
-    'http_req_duration{operacao:escrita}': ['p(95)<500'],
+    'http_req_duration{operacao:escrita}': ['p(95)<100'],
     // Ler o histórico e os alertas.
-    'http_req_duration{operacao:leitura}': ['p(95)<500'],
+    'http_req_duration{operacao:leitura}': ['p(95)<100'],
     // A série por período agrupa leituras no banco, então tem limite mais folgado.
-    'http_req_duration{operacao:serie}': ['p(95)<1000'],
+    'http_req_duration{operacao:serie}': ['p(95)<250'],
   },
   summaryTrendStats: ['avg', 'med', 'p(90)', 'p(95)', 'max'],
 };
