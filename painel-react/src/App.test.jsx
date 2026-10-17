@@ -42,6 +42,7 @@ const fetchPorUrl = () =>
 beforeEach(() => {
   alertasDoServidor = [];
   localStorage.clear();
+  localStorage.setItem('idioma', 'pt'); // o jsdom diz que o navegador está em inglês; os testes são em português
   socketFalso.ouvintes = {};
   socketFalso.disconnect.mockClear();
   vi.stubGlobal('fetch', fetchPorUrl());

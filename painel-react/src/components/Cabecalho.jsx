@@ -1,4 +1,5 @@
-import { LogOut, Moon, Sun } from 'lucide-react';
+import { Languages, LogOut, Moon, Sun } from 'lucide-react';
+import { useIdioma } from '@/i18n/idioma-contexto';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import StatusConexao from './StatusConexao';
@@ -15,15 +16,16 @@ function Marca() {
 }
 
 export default function Cabecalho({ conexao, tema, onAlternarTema, onSair }) {
-  const rotuloTema = tema === 'escuro' ? 'Mudar para o tema claro' : 'Mudar para o tema escuro';
+  const { t, alternarIdioma } = useIdioma();
+  const rotuloTema = tema === 'escuro' ? t('tema.claro') : t('tema.escuro');
 
   return (
     <header className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 border-b border-linha pb-4">
       <div className="flex items-center gap-3">
         <Marca />
         <div>
-          <h1 className="font-condensada text-3xl font-semibold leading-none sm:text-4xl">Monitoramento da fábrica</h1>
-          <p className="mt-1 text-sm text-suave">Temperatura, rotação e vibração em tempo real</p>
+          <h1 className="font-condensada text-3xl font-semibold leading-none sm:text-4xl">{t('app.titulo')}</h1>
+          <p className="mt-1 text-sm text-suave">{t('app.subtitulo')}</p>
         </div>
       </div>
 
@@ -39,9 +41,14 @@ export default function Cabecalho({ conexao, tema, onAlternarTema, onSair }) {
           <TooltipContent>{rotuloTema}</TooltipContent>
         </Tooltip>
 
+        <Button variant="outline" size="icon" onClick={alternarIdioma} aria-label={t('idioma.mudar')}>
+          <Languages aria-hidden="true" />
+          <span className="sr-only">{t('idioma.botao')}</span>
+        </Button>
+
         <Button variant="outline" onClick={onSair}>
           <LogOut aria-hidden="true" />
-          Sair
+          {t('sair')}
         </Button>
       </div>
     </header>

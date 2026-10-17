@@ -1,4 +1,5 @@
 import { AlertTriangle, CheckCircle2, Clock, Unplug } from 'lucide-react';
+import { useIdioma } from '@/i18n/idioma-contexto';
 import { cn } from '@/lib/utils';
 
 const ICONES = {
@@ -13,6 +14,7 @@ const ICONES = {
  * Fica cinza quando está tudo normal e vira uma faixa vermelha cheia quando há máquina crítica.
  */
 export default function ResumoFabrica({ resumo, maquinasAfetadas, total }) {
+  const { t } = useIdioma();
   const Icone = ICONES[resumo.nivel];
   const critico = resumo.nivel === 'critico';
 
@@ -20,13 +22,13 @@ export default function ResumoFabrica({ resumo, maquinasAfetadas, total }) {
     maquinasAfetadas.length > 0
       ? maquinasAfetadas.join(', ')
       : resumo.nivel === 'normal'
-        ? `${total} máquinas monitoradas`
+        ? t('resumo.monitoradas', { n: total })
         : null;
 
   return (
     <section
       role="status"
-      aria-label="Resumo da fábrica"
+      aria-label={t('resumo.aria')}
       className={cn(
         'mt-6 flex items-center gap-4 rounded border px-5 py-4',
         critico ? 'border-alarme bg-alarme text-painel' : 'border-linha bg-painel',

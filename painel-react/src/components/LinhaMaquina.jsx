@@ -1,5 +1,6 @@
 import { AlertTriangle, CircleDot, Clock, Unplug } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useIdioma } from '@/i18n/idioma-contexto';
 import { cn } from '@/lib/utils';
 import { formatarNumero, LIMITE_TEMPERATURA, LIMITE_VIBRACAO } from '@/lib/limites';
 import Medidor from './Medidor';
@@ -10,16 +11,16 @@ const TEMP = { min: 40, max: 120 };
 const VIB = { min: 0, max: 8 };
 
 const ESTADOS = {
-  normal: { texto: 'Normal', Icone: CircleDot },
-  critica: { texto: 'Crítica', Icone: AlertTriangle },
-  'sem-sinal': { texto: 'Sem sinal', Icone: Unplug },
-  'sem-dados': { texto: 'Aguardando leitura', Icone: Clock },
+  normal: { chave: 'estado.normal', Icone: CircleDot },
+  critica: { chave: 'estado.critica', Icone: AlertTriangle },
+  'sem-sinal': { chave: 'estado.semSinal', Icone: Unplug },
+  'sem-dados': { chave: 'estado.semDados', Icone: Clock },
 };
 
-function haQuantoTempo(recebidoEm, agora) {
+function haQuantoTempo(t, recebidoEm, agora) {
   const s = Math.max(0, Math.round((agora - recebidoEm) / 1000));
-  if (s < 60) return `há ${s} s`;
-  return `há ${Math.floor(s / 60)} min`;
+  if (s < 60) return t('maquina.haSegundos', { n: s });
+  return t('maquina.haMinutos', { n: Math.floor(s / 60) });
 }
 
 function Metrica({ rotulo, children, className }) {
@@ -32,8 +33,10 @@ function Metrica({ rotulo, children, className }) {
 }
 
 export default function LinhaMaquina({ nome, dado, avaliacao, agora, serie, onDetalhes }) {
+  const { t, locale } = useIdioma();
   const { estado, motivos } = avaliacao;
-  const { texto, Icone } = ESTADOS[estado];
+  const { chave, Icone } = ESTADOS[estado];
+  const texto = t(chave);
   const critica = estado === 'critica';
   const semDados = estado === 'sem-dados';
   const semSinal = estado === 'sem-sinal';
@@ -66,41 +69,41 @@ export default function LinhaMaquina({ nome, dado, avaliacao, agora, serie, onDe
             ))}
           </ul>
         )}
-        {dado && <p className="mt-1 text-xs text-suave">Atualizada {haQuantoTempo(dado.recebidoEm, agora)}</p>}
-        <Button variant="outline" size="sm" className="mt-2" onClick={() => onDetalhes(nome)} aria-label={`Ver detalhes de ${nome}`}>
-          Ver detalhes
+        {dado && <p className="mt-1 text-xs text-suave">{t('maquina.atualizada', { quando: haQuantoTempo(t, dado.recebidoEm, agora) })}</p>}
+        <Button variant="outline" size="sm" className="mt-2" onClick={() => onDetalhes(nome)} aria-label={t('maquina.detalhesAria', { nome })}>
+          {t('maquina.detalhes')}
         </Button>
       </div>
 
       {semDados ? (
-        <p className="text-sm text-suave col-span-2 md:col-span-3">Os valores aparecem assim que a máquina enviar a primeira leitura.</p>
+        <p className="text-sm text-suave col-span-2 md:col-span-3">{t('maquina.semDados')}</p>
       ) : (
         <>
-          <Metrica rotulo="Temperatura do motor">
+          <Metrica rotulo={t('maquina.temperatura')}>
             <p className={cn('numero text-4xl leading-tight', semSinal && 'text-suave', dado.temperaturaMotor > LIMITE_TEMPERATURA && 'text-alarme')}>
-              {formatarNumero(dado.temperaturaMotor, 1, 1)}
+              {formatarNumero(dado.temperaturaMotor, 1, 1, locale)}
               <span className="ml-1 text-lg font-medium text-suave">°C</span>
             </p>
-            <Medidor valor={dado.temperaturaMotor} limite={LIMITE_TEMPERATURA} {...TEMP} rotulo={`Temperatura de ${nome}`} />
+            <Medidor valor={dado.temperaturaMotor} limite={LIMITE_TEMPERATURA} {...TEMP} rotulo={t('maquina.temperaturaDe', { nome })} />
           </Metrica>
 
-          <Metrica rotulo="Vibração">
+          <Metrica rotulo={t('maquina.vibracao')}>
             <p className={cn('numero text-4xl leading-tight', semSinal && 'text-suave', dado.vibracao > LIMITE_VIBRACAO && 'text-alarme')}>
-              {formatarNumero(dado.vibracao, 2, 2)}
+              {formatarNumero(dado.vibracao, 2, 2, locale)}
               <span className="ml-1 text-lg font-medium text-suave">mm/s</span>
             </p>
-            <Medidor valor={dado.vibracao} limite={LIMITE_VIBRACAO} {...VIB} rotulo={`Vibração de ${nome}`} />
+            <Medidor valor={dado.vibracao} limite={LIMITE_VIBRACAO} {...VIB} rotulo={t('maquina.vibracaoDe', { nome })} />
           </Metrica>
 
-          <Metrica rotulo="Rotação">
-            <p className={cn('numero text-4xl leading-tight', semSinal && 'text-suave')}>{formatarNumero(dado.rpm, 0)}</p>
+          <Metrica rotulo={t('maquina.rotacao')}>
+            <p className={cn('numero text-4xl leading-tight', semSinal && 'text-suave')}>{formatarNumero(dado.rpm, 0, 0, locale)}</p>
             <p className="text-sm text-suave">rpm</p>
           </Metrica>
         </>
       )}
 
       <div className="md:justify-self-end">
-        <p className="mb-1 text-sm text-suave md:sr-only">Últimas temperaturas</p>
+        <p className="mb-1 text-sm text-suave md:sr-only">{t('maquina.ultimasTemperaturas')}</p>
         <Sparkline valores={serie} limite={LIMITE_TEMPERATURA} />
       </div>
     </article>

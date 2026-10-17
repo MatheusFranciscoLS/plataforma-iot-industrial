@@ -1,14 +1,16 @@
 import { useState } from 'react';
-import { Loader2, LogIn, Play } from 'lucide-react';
+import { Languages, Loader2, LogIn, Play } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useIdioma } from '@/i18n/idioma-contexto';
 import { fazerLogin } from '@/lib/api';
 import { ACESSO_DEMO } from '@/lib/demo';
 import AvisoServidorAcordando from './AvisoServidorAcordando';
 import FluxoDoSistema from './FluxoDoSistema';
 
 export default function Login({ aviso, onEntrar }) {
+  const { t, alternarIdioma } = useIdioma();
   const [usuario, setUsuario] = useState('');
   const [senha, setSenha] = useState('');
   const [erro, setErro] = useState('');
@@ -20,27 +22,30 @@ export default function Login({ aviso, onEntrar }) {
     try {
       onEntrar(await fazerLogin(nome, chave));
     } catch (falha) {
-      setErro(falha.message);
+      setErro(t(`erro.${falha.codigo ?? 'servidor'}`));
       setEnviando(false);
     }
   }
 
   return (
     <main className="mx-auto min-h-screen max-w-5xl px-4 py-10 sm:px-6 lg:py-16">
-      <div className="grid gap-10 lg:grid-cols-[1.2fr_1fr] lg:items-center lg:gap-16">
+      <div className="flex justify-end">
+        <Button variant="outline" size="sm" onClick={alternarIdioma} aria-label={t('idioma.mudar')}>
+          <Languages aria-hidden="true" />
+          {t('idioma.botao')}
+        </Button>
+      </div>
+
+      <div className="mt-6 grid gap-10 lg:grid-cols-[1.2fr_1fr] lg:items-center lg:gap-16">
         <div>
-          <h1 className="font-condensada text-5xl font-semibold leading-none sm:text-6xl">Monitoramento da fábrica</h1>
-          <p className="mt-4 max-w-md text-lg text-suave">
-            Acompanhe a temperatura, a rotação e a vibração das máquinas em tempo real e veja na hora qual delas passou do limite.
-          </p>
-          <p className="mt-3 max-w-md text-suave">
-            Projeto de portfólio: quatro serviços (Java, Node, Python e React) conversando por uma fila de mensagens.
-          </p>
+          <h1 className="font-condensada text-5xl font-semibold leading-none sm:text-6xl">{t('app.titulo')}</h1>
+          <p className="mt-4 max-w-md text-lg text-suave">{t('login.subtitulo')}</p>
+          <p className="mt-3 max-w-md text-suave">{t('login.portfolio')}</p>
         </div>
 
         <div className="rounded border border-linha bg-painel p-6">
           <h2 id="titulo-login" className="font-condensada text-2xl font-semibold">
-            Entrar
+            {t('login.entrar')}
           </h2>
 
           {aviso && (
@@ -51,9 +56,9 @@ export default function Login({ aviso, onEntrar }) {
 
           <Button type="button" size="lg" className="mt-4 w-full" disabled={enviando} onClick={() => entrar(ACESSO_DEMO.usuario, ACESSO_DEMO.senha)}>
             {enviando ? <Loader2 aria-hidden="true" className="animate-spin" /> : <Play aria-hidden="true" />}
-            {enviando ? 'Entrando…' : 'Ver o painel de demonstração'}
+            {enviando ? t('login.entrando') : t('login.demo')}
           </Button>
-          <p className="mt-2 text-sm text-suave">Entra com um acesso de demonstração, sem precisar digitar nada.</p>
+          <p className="mt-2 text-sm text-suave">{t('login.demoDica')}</p>
           {enviando && <AvisoServidorAcordando />}
 
           <form
@@ -64,15 +69,15 @@ export default function Login({ aviso, onEntrar }) {
             }}
             className="mt-6 border-t border-linha pt-5"
           >
-            <p className="text-sm font-medium">Ou entre com usuário e senha</p>
+            <p className="text-sm font-medium">{t('login.ou')}</p>
 
             <div className="mt-3 space-y-2">
-              <Label htmlFor="usuario">Usuário</Label>
+              <Label htmlFor="usuario">{t('login.usuario')}</Label>
               <Input id="usuario" autoComplete="username" value={usuario} onChange={(e) => setUsuario(e.target.value)} required />
             </div>
 
             <div className="mt-4 space-y-2">
-              <Label htmlFor="senha">Senha</Label>
+              <Label htmlFor="senha">{t('login.senha')}</Label>
               <Input id="senha" type="password" autoComplete="current-password" value={senha} onChange={(e) => setSenha(e.target.value)} required />
             </div>
 
@@ -84,7 +89,7 @@ export default function Login({ aviso, onEntrar }) {
 
             <Button type="submit" variant="outline" className="mt-5 w-full" disabled={enviando}>
               <LogIn aria-hidden="true" />
-              Entrar
+              {t('login.entrar')}
             </Button>
           </form>
         </div>
