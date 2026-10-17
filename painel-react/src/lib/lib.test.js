@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { adicionarLeitura, agruparHistorico, MAX_PONTOS, mesclarLeituras, serieDaMaquina, ultimasLeituras } from './historico';
 import { gerarCsv } from './csv';
-import { alertasRecentes, avaliarMaquina, motivosDaLeitura, resumirFabrica, SEM_SINAL_APOS_S } from './limites';
+import { avaliarMaquina, descreverAlerta, motivosDaLeitura, resumirFabrica, SEM_SINAL_APOS_S } from './limites';
 import { lerExpiracao, tokenExpirado } from './token';
 
 const leitura = (extra = {}) => ({
@@ -61,15 +61,15 @@ describe('alertas', () => {
     expect(motivosDaLeitura(leitura({ temperaturaMotor: 96, vibracao: 5.1 }))).toHaveLength(2);
   });
 
-  it('alertasRecentes ordena do mais novo para o mais antigo e respeita o máximo', () => {
-    const leituras = [];
-    for (let t = 1; t <= 12; t++) leituras.push(leitura({ timestamp: t, temperaturaMotor: 99 }));
-    leituras.push(leitura({ timestamp: 50 })); // normal
-
-    const alertas = alertasRecentes(leituras, 5);
-
-    expect(alertas).toHaveLength(5);
-    expect(alertas.map((a) => a.leitura.timestamp)).toEqual([12, 11, 10, 9, 8]);
+  it('descreverAlerta escreve o motivo e o valor, com vírgula e unidade', () => {
+    expect(descreverAlerta({ tipo: 'TEMPERATURA', valor: 96.5, limite: 95 })).toEqual({
+      motivo: 'Temperatura acima de 95 °C',
+      valor: '96,5 °C',
+    });
+    expect(descreverAlerta({ tipo: 'VIBRACAO', valor: 5.4, limite: 5 })).toEqual({
+      motivo: 'Vibração acima de 5,0 mm/s',
+      valor: '5,40 mm/s',
+    });
   });
 });
 

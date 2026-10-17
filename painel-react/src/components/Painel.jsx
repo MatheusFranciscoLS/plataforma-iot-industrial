@@ -1,6 +1,7 @@
 import { lazy, Suspense, useMemo, useState } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAgora } from '@/hooks/useAgora';
+import { useAlertas } from '@/hooks/useAlertas';
 import { useTelemetria } from '@/hooks/useTelemetria';
 import { agruparHistorico, MAX_PONTOS, serieDaMaquina } from '@/lib/historico';
 import { METRICA_PADRAO } from '@/lib/metricas';
@@ -18,6 +19,7 @@ export default function Painel({ token, tema, onAlternarTema, onSair, onSessaoIn
   const [metrica, setMetrica] = useState(METRICA_PADRAO);
   const { historico, leituras, statusAtual, conexao, erroHistorico } = useTelemetria(token, onSessaoInvalida, pontos);
   const historicoDoGrafico = useMemo(() => agruparHistorico(leituras, pontos, metrica.id), [leituras, pontos, metrica]);
+  const { alertas, erro: erroAlertas } = useAlertas(token, onSessaoInvalida);
   const agora = useAgora();
 
   const avaliacoes = MAQUINAS.map((nome) => avaliarMaquina(statusAtual[nome], agora));
@@ -65,7 +67,7 @@ export default function Painel({ token, tema, onAlternarTema, onSair, onSessaoIn
           />
         </Suspense>
 
-        <AlertasRecentes leituras={leituras} />
+        <AlertasRecentes alertas={alertas} erro={erroAlertas} />
       </main>
 
       <footer className="mt-8 flex flex-wrap justify-between gap-x-6 gap-y-1 border-t border-linha pt-4 text-sm text-suave">

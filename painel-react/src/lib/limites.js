@@ -36,13 +36,12 @@ export function motivosDaLeitura(dado) {
   return motivos;
 }
 
-/** As leituras mais recentes que passaram de algum limite, da mais nova para a mais antiga. */
-export function alertasRecentes(leituras, maximo = 8) {
-  return [...leituras]
-    .sort((a, b) => b.timestamp - a.timestamp)
-    .map((leitura) => ({ leitura, motivos: motivosDaLeitura(leitura) }))
-    .filter((alerta) => alerta.motivos.length > 0)
-    .slice(0, maximo);
+/** Texto de um alerta guardado no servidor: o que passou do limite e o valor lido. */
+export function descreverAlerta({ tipo, valor, limite }) {
+  if (tipo === 'VIBRACAO') {
+    return { motivo: `Vibração acima de ${formatarNumero(limite, 1, 1)} mm/s`, valor: `${formatarNumero(valor, 2, 2)} mm/s` };
+  }
+  return { motivo: `Temperatura acima de ${formatarNumero(limite, 0)} °C`, valor: `${formatarNumero(valor, 1, 1)} °C` };
 }
 
 /** Frase única que resume a fábrica inteira. */

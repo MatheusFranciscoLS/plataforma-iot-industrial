@@ -19,11 +19,14 @@ public class RegistroSensorService {
     private final RegistroSensorRepository repository;
     private final RabbitTemplate rabbitTemplate;
     private final ObjectMapper objectMapper;
+    private final AlertaService alertas;
 
-    public RegistroSensorService(RegistroSensorRepository repository, RabbitTemplate rabbitTemplate, ObjectMapper objectMapper) {
+    public RegistroSensorService(RegistroSensorRepository repository, RabbitTemplate rabbitTemplate,
+                                 ObjectMapper objectMapper, AlertaService alertas) {
         this.repository = repository;
         this.rabbitTemplate = rabbitTemplate;
         this.objectMapper = objectMapper;
+        this.alertas = alertas;
     }
 
     public RegistroSensor registrar(LeituraRequest leitura) {
@@ -37,6 +40,13 @@ public class RegistroSensorService {
 
         RegistroSensor salvo = repository.save(novo);
         log.info("Leitura salva: {} | {} °C", salvo.getIdMaquina(), salvo.getTemperaturaMotor());
+
+        // Um problema ao registrar o alerta não pode impedir a leitura de seguir adiante.
+        try {
+            alertas.avaliar(salvo);
+        } catch (Exception e) {
+            log.warn("Não foi possível avaliar os alertas da leitura {}: {}", salvo.getId(), e.getMessage());
+        }
 
         // Só depois de salvar avisa a fila. Se a fila falhar, a leitura continua salva.
         try {

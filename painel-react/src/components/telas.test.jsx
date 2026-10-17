@@ -139,26 +139,37 @@ describe('ControlesDoGrafico', () => {
 });
 
 describe('AlertasRecentes', () => {
-  it('lista as leituras que passaram dos limites, da mais nova para a mais antiga, com o motivo', () => {
-    const leituras = [
-      leitura({ id: 1, timestamp: 100, temperaturaMotor: 99 }),
-      leitura({ id: 2, timestamp: 110, idMaquina: 'MAQ-02', vibracao: 5.6 }),
-      leitura({ id: 3, timestamp: 120 }), // normal: não entra
-    ];
-    render(<AlertasRecentes leituras={leituras} />);
+  const alerta = (extra = {}) => ({ id: 1, idMaquina: 'MAQ-01', timestamp: 100, tipo: 'TEMPERATURA', valor: 99, limite: 95, ...extra });
+
+  it('lista os alertas do servidor com hora, máquina, motivo e valor', () => {
+    render(
+      <AlertasRecentes
+        alertas={[alerta({ id: 2, idMaquina: 'MAQ-02', tipo: 'VIBRACAO', valor: 5.6, limite: 5 }), alerta()]}
+        erro={false}
+      />,
+    );
 
     const itens = screen.getAllByRole('listitem');
     expect(itens).toHaveLength(2);
     expect(itens[0]).toHaveTextContent('MAQ-02');
     expect(itens[0]).toHaveTextContent('Vibração acima de 5,0 mm/s');
+    expect(itens[0]).toHaveTextContent('5,60 mm/s');
     expect(itens[1]).toHaveTextContent('Temperatura acima de 95 °C');
+    expect(itens[1]).toHaveTextContent('99,0 °C');
   });
 
   it('sem alertas, diz isso em vez de mostrar uma lista vazia', () => {
-    render(<AlertasRecentes leituras={[leitura()]} />);
+    render(<AlertasRecentes alertas={[]} erro={false} />);
 
     expect(screen.queryByRole('list')).not.toBeInTheDocument();
-    expect(screen.getByText(/Nenhuma leitura passou dos limites/)).toBeInTheDocument();
+    expect(screen.getByText(/Nenhuma máquina passou dos limites/)).toBeInTheDocument();
+  });
+
+  it('se não conseguir atualizar, avisa e continua mostrando os últimos alertas', () => {
+    render(<AlertasRecentes alertas={[alerta()]} erro />);
+
+    expect(screen.getByRole('alert')).toHaveTextContent('Não foi possível atualizar os alertas');
+    expect(screen.getAllByRole('listitem')).toHaveLength(1);
   });
 });
 
