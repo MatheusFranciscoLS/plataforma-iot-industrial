@@ -32,7 +32,15 @@ export async function fazerLogin(usuario, senha) {
   return token;
 }
 
-/** Chama a API com o token. Lança SessaoInvalidaError se o token não vale mais e Error para outras falhas. */
+/** O usuário está logado, mas o perfil dele não pode fazer isso (a API respondeu 403). A sessão continua valendo. */
+export class SemPermissaoError extends Error {}
+
+/**
+ * Chama a API com o token. Lança SessaoInvalidaError se o token não vale mais, SemPermissaoError se o perfil
+ * não pode a ação e Error (com `status`) para outras falhas.
+ * Nas consultas comuns qualquer usuário logado pode tudo, então um 403 ali ainda significa sessão inválida
+ * (como a API respondia antes dos perfis); nas ações de escrita e em /api/usuarios, 403 é falta de permissão.
+ */
 async function chamar(token, caminho, opcoes = {}) {
   const { corpo, ...resto } = opcoes;
   const resposta = await fetch(`${API_JAVA}${caminho}`, {
@@ -44,10 +52,34 @@ async function chamar(token, caminho, opcoes = {}) {
     ...(corpo !== undefined && { body: JSON.stringify(corpo) }),
   });
 
+  const eAcaoRestrita = (resto.method ?? 'GET') !== 'GET' || caminho.startsWith('/api/usuarios');
+  if (resposta.status === 403 && eAcaoRestrita) throw new SemPermissaoError();
   if (resposta.status === 401 || resposta.status === 403) throw new SessaoInvalidaError();
   if (!resposta.ok) throw Object.assign(new Error(`Falha na chamada ${caminho} (${resposta.status})`), { status: resposta.status });
 
   return resposta;
+}
+
+/** Os usuários cadastrados ({ nome, perfil }). Só o administrador pode. */
+export async function buscarUsuarios(token) {
+  return (await chamar(token, '/api/usuarios')).json();
+}
+
+/** Cria um usuário. Erro com `status` 409 se o nome já existe e 400 se algum dado não vale. */
+export async function criarUsuario(token, { nome, senha, perfil }) {
+  return (await chamar(token, '/api/usuarios', { method: 'POST', corpo: { nome, senha, perfil } })).json();
+}
+
+export async function trocarPerfilDoUsuario(token, nome, perfil) {
+  return (await chamar(token, `/api/usuarios/${encodeURIComponent(nome)}/perfil`, { method: 'PUT', corpo: { perfil } })).json();
+}
+
+export async function trocarSenhaDoUsuario(token, nome, senha) {
+  await chamar(token, `/api/usuarios/${encodeURIComponent(nome)}/senha`, { method: 'PUT', corpo: { senha } });
+}
+
+export async function apagarUsuario(token, nome) {
+  await chamar(token, `/api/usuarios/${encodeURIComponent(nome)}`, { method: 'DELETE' });
 }
 
 /**
