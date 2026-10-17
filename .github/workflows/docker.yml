@@ -27,7 +27,7 @@ jobs:
 
     steps:
       - name: Baixar o código
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Conferir o docker-compose.yml
         run: docker compose config --quiet
