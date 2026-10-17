@@ -1,0 +1,123 @@
+name: Segurança
+
+# Duas varreduras gratuitas, uma análise do código (CodeQL) e uma busca de vulnerabilidades conhecidas em
+# dependências e na imagem Docker (Trivy). Os resultados aparecem na aba Security do GitHub (Code scanning).
+# As varreduras só avisam: não derrubam o CI, porque uma vulnerabilidade nova numa biblioteca de terceiros
+# não deve impedir uma mudança que não tem nada a ver com ela. Quem revisa é o Dependabot, que abre PRs de atualização.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "0 6 * * 1" # toda segunda-feira, 6h UTC (vulnerabilidades novas aparecem mesmo sem mudança no código)
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  codeql:
+    name: CodeQL (${{ matrix.linguagem }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+    strategy:
+      fail-fast: false
+      matrix:
+        linguagem: [java-kotlin, javascript-typescript, python]
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Preparar o CodeQL
+        uses: github/codeql-action/init@v4.39.0
+        with:
+          languages: ${{ matrix.linguagem }}
+          build-mode: none
+
+      - name: Analisar
+        uses: github/codeql-action/analyze@v4.39.0
+        with:
+          category: "/language:${{ matrix.linguagem }}"
+
+  dependencias:
+    name: Trivy (dependências e configuração)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      security-events: write
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Procurar vulnerabilidades e erros de configuração no repositório
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          scanners: vuln,misconfig
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          format: sarif
+          output: trivy-repositorio.sarif
+          exit-code: "0"
+
+      - name: Mostrar o resumo no log
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          scanners: vuln,misconfig
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          format: table
+          exit-code: "0"
+
+      - name: Enviar o resultado para a aba Security
+        uses: github/codeql-action/upload-sarif@v4.39.0
+        with:
+          sarif_file: trivy-repositorio.sarif
+          category: trivy-repositorio
+
+  imagem:
+    name: Trivy (imagem da API)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      security-events: write
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Construir a imagem da API
+        run: docker build -t iot-core:varredura ./iot-core
+
+      - name: Procurar vulnerabilidades na imagem
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: iot-core:varredura
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          format: sarif
+          output: trivy-imagem.sarif
+          exit-code: "0"
+
+      - name: Mostrar o resumo no log
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: iot-core:varredura
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          format: table
+          exit-code: "0"
+
+      - name: Enviar o resultado para a aba Security
+        uses: github/codeql-action/upload-sarif@v4.39.0
+        with:
+          sarif_file: trivy-imagem.sarif
+          category: trivy-imagem
