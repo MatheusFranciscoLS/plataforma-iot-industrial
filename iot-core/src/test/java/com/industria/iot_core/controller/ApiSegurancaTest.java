@@ -1,5 +1,6 @@
 package com.industria.iot_core.controller;
 
+import com.industria.iot_core.model.Usuario;
 import com.industria.iot_core.model.RegistroSensor;
 import com.industria.iot_core.repository.RegistroSensorRepository;
 import com.industria.iot_core.security.TokenService;
@@ -82,18 +83,18 @@ class ApiSegurancaTest {
     @Test
     void historicoSemTokenEhBloqueado() throws Exception {
         mockMvc.perform(get("/api/sensores"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isUnauthorized());
     }
 
     @Test
     void historicoComTokenInvalidoEhBloqueado() throws Exception {
         mockMvc.perform(get("/api/sensores").header("Authorization", "Bearer lixo"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isUnauthorized());
     }
 
     @Test
     void historicoComTokenValidoFunciona() throws Exception {
-        String token = tokenService.gerarToken("admin");
+        String token = tokenService.gerarToken("admin", Usuario.Perfil.ADMIN);
 
         mockMvc.perform(get("/api/sensores").header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())

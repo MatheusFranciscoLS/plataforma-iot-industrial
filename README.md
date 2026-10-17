@@ -123,9 +123,16 @@ docker compose up -d --build
 # 💡 Credenciais de Teste
 
 ```txt
+Demonstração (perfil OPERADOR: vê tudo, reconhece alertas e troca limites)
+Usuário: demo
+Senha: demo123
+
+Administrador local (perfil ADMIN: também gerencia usuários)
 Usuário: admin
 Senha: senha123
 ```
+
+Em produção, troque a senha do `admin` (tela de usuários do painel) ou defina `ADMIN_SENHA` antes da primeira subida: essa senha padrão é pública.
 
 ---
 
@@ -168,7 +175,8 @@ cd simulador-python && pip install -r requirements.txt && python -m unittest -v
 - **Um único segredo para o JWT nos dois serviços.** O Spring Boot emite o token e o Node valida a assinatura com a mesma chave, sem precisar chamar a API Java a cada conexão WebSocket.
 - **Sensores enviam sem login.** `POST /api/sensores` é aberto para que o simulador (e, em um caso real, os equipamentos) não precisem de token. Já a leitura do histórico exige token. Quem quiser fechar essa porta define `SENSOR_API_KEY` na API e no simulador: a API passa a exigir o cabeçalho `X-API-Key`.
 - **O sensor não escolhe o `id`.** A API recebe a leitura em um objeto próprio (`LeituraRequest`), valida os campos (nome da máquina, timestamp, temperatura, vibração e rotação) e sempre cria um registro novo. Antes, a entidade do banco era recebida direto, e um `POST` com o `id` de um registro existente o sobrescrevia (há um teste para isso).
-- **Usuários no banco, senha em BCrypt.** O login deixou de comparar com um texto fixo no código: os usuários ficam na tabela `usuario`, só com o hash da senha. Na primeira subida com o banco vazio a API cria o usuário de demonstração (`admin`); em produção, `ADMIN_USUARIO` e `ADMIN_SENHA` trocam esse acesso. Usuário inexistente gasta o mesmo tempo de um usuário real, para o tempo de resposta não revelar quem existe.
+- **Usuários no banco, senha em BCrypt.** O login deixou de comparar com um texto fixo no código: os usuários ficam na tabela `usuario`, só com o hash da senha. Na primeira subida com o banco vazio a API cria o administrador (`admin`) e o usuário de demonstração (`demo`); em produção, `ADMIN_USUARIO` e `ADMIN_SENHA` trocam o acesso do administrador e `DEMO_USUARIO` vazio desliga o de demonstração. Se o administrador ainda usa a senha padrão, a API avisa no log.
+- **Três perfis.** `ADMIN` gerencia usuários (`/api/usuarios`: criar, trocar senha e perfil, apagar) e faz tudo do operador; `OPERADOR` reconhece alertas e troca limites; `LEITURA` só olha. O perfil vai dentro do token e a regra fica no `SecurityConfig`. Token sem perfil vale só como `LEITURA`, e o sistema nunca fica sem administrador. O botão de demonstração entra como `demo` (operador), de propósito: quem visita pode testar alertas e limites, mas ninguém de fora cria ou apaga usuários no site público. Usuário inexistente gasta o mesmo tempo de um usuário real, para o tempo de resposta não revelar quem existe.
 - **Limite de tentativas no login.** Depois de 5 falhas seguidas do mesmo endereço para o mesmo usuário, o login responde 429 por 5 minutos (`LOGIN_MAX_TENTATIVAS` e `LOGIN_JANELA_SEGUNDOS` mudam isso). A contagem fica na memória, então reiniciar a API zera. Atrás da hospedagem o endereço vem do cabeçalho `X-Forwarded-For`.
 - **Histórico com filtro.** `GET /api/sensores` sem parâmetros continua devolvendo os 60 mais recentes; `?maquina=MAQ-01&limite=100` filtra uma máquina e escolhe o tamanho (de 1 a 500).
 - **Rota de saúde.** `GET /actuator/health` fica aberta e só diz se a API e o banco estão no ar; o RabbitMQ fora do ar não derruba a saúde, porque a API salva as leituras mesmo assim.
@@ -183,7 +191,7 @@ cd simulador-python && pip install -r requirements.txt && python -m unittest -v
 
 - **O único teste que existia estava quebrado.** O `contextLoads` falhava porque o arquivo de propriedades de teste não tinha a chave do JWT. Sem CI, nada avisava isso. Hoje o CI roda todos os testes a cada mudança.
 - **Testar a segurança de ponta a ponta vale mais que testar só a classe.** Os testes de `JwtFilter` e `TokenService` isolados passariam mesmo com a regra de rotas errada. Os testes com a aplicação inteira é que provam que `/api/sensores` realmente exige token.
-- **Sem token, o Spring Security 7 responde 403, não 401.** Isso aparece nos testes: a configuração não define uma resposta própria para requisições sem autenticação, então vale o comportamento padrão.
+- **Sem token, o Spring Security 7 responde 403 por padrão, e isso atrapalha os perfis.** Com perfis, "não sei quem você é" (401) e "sei, mas você não pode" (403) precisam ser respostas diferentes: o painel desloga no 401, mas só avisa no 403. Por isso a API define uma resposta 401 própria para quem não se identificou.
 - **Versão do Java importa.** O projeto compila para Java 21 (`pom.xml` e `Dockerfile`); por isso o CI usa Java 21.
 
 ## Limitações conhecidas e próximos passos

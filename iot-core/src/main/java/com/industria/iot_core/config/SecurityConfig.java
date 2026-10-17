@@ -5,10 +5,12 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
@@ -45,8 +47,16 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/actuator/health").permitAll()
                 // Erros de validação (400) são reenviados internamente para /error; sem isso viram 403
                 .requestMatchers("/error").permitAll()
+                // Gerenciar usuários: só ADMIN
+                .requestMatchers("/api/usuarios/**").hasRole("ADMIN")
+                // Reconhecer alertas e trocar limites: ADMIN e OPERADOR (LEITURA só olha)
+                .requestMatchers(HttpMethod.POST, "/api/alertas/*/reconhecer").hasAnyRole("ADMIN", "OPERADOR")
+                .requestMatchers(HttpMethod.PUT, "/api/limites/**").hasAnyRole("ADMIN", "OPERADOR")
+                .requestMatchers(HttpMethod.DELETE, "/api/limites/**").hasAnyRole("ADMIN", "OPERADOR")
                 .anyRequest().authenticated()
             )
+            // Sem token (ou com token inválido): 401. Com token válido mas sem permissão: 403.
+            .exceptionHandling(erros -> erros.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
             // O leitor de token roda ANTES do filtro de login do Spring Security
             .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 
