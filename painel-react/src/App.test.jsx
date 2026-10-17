@@ -97,7 +97,7 @@ describe('App', () => {
     render(<App />);
 
     const botao = await screen.findByRole('button', { name: 'mais pontos' });
-    expect(fetchFalso.mock.calls[0][0]).toContain('/api/sensores?limite=60'); // 20 pontos x 3 máquinas
+    expect(fetchFalso.mock.calls.some(([url]) => String(url).includes('/api/sensores?limite=60'))).toBe(true); // 20 pontos x 3 máquinas
 
     act(() => botao.click());
 

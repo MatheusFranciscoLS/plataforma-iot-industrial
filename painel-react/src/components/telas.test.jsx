@@ -221,7 +221,7 @@ describe('DetalheDaMaquina', () => {
     mockarApi({ ok: false, status: 500, json: async () => ({}) });
     render(<DetalheDaMaquina token="t" maquina="MAQ-01" aoFechar={vi.fn()} onSessaoInvalida={vi.fn()} />);
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('Não foi possível carregar as leituras desta máquina');
+    expect(await screen.findByText('Não foi possível carregar as leituras desta máquina.')).toHaveAttribute('role', 'alert');
   });
 
   it('se o token não vale mais, avisa o app para voltar ao login', async () => {

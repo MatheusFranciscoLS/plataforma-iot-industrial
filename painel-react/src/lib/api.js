@@ -75,6 +75,21 @@ async function chamar(token, caminho, opcoes = {}) {
   return resposta;
 }
 
+/**
+ * Série de um período ('1h', '6h' ou '24h'): média e máximo por faixa de tempo, calculados no servidor.
+ * `maquina` é opcional (padrão: todas). Resposta: { periodo, faixaSegundos, de, ate, maquinas: [{ idMaquina, pontos }] }.
+ */
+export async function buscarSerie(token, periodo, maquina) {
+  const parametros = new URLSearchParams({ periodo });
+  if (maquina) parametros.set('maquina', maquina);
+  return (await chamar(token, `/api/sensores/serie?${parametros}`)).json();
+}
+
+/** Resumo por máquina em um período: leituras, média, máximo, mínimo e quantos alertas houve. */
+export async function buscarResumo(token, periodo) {
+  return (await chamar(token, `/api/sensores/resumo?periodo=${encodeURIComponent(periodo)}`)).json();
+}
+
 /** Os usuários cadastrados ({ nome, perfil }). Só o administrador pode. */
 export async function buscarUsuarios(token) {
   return (await chamar(token, '/api/usuarios')).json();

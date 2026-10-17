@@ -43,7 +43,8 @@ O painel funciona em tela de computador e de celular, em tema claro e escuro, em
 
 - **Streaming em Tempo Real:** telemetria das máquinas via WebSockets; se o tempo real falhar, o painel avisa e busca as leituras na API a cada 3 segundos.
 - **Alertas completos:** a API registra um alerta quando uma máquina passa do limite (padrão 95 °C e 5,0 mm/s). Cada máquina pode ter o seu limite, os alertas se reconhecem (quem viu e quando) e a lista filtra por máquina, tipo e situação.
-- **Histórico e gráfico interativo:** temperatura, vibração ou rotação, escolha de máquinas e de quantos pontos, janela de detalhes por máquina (mínimo, média, máximo) e exportação em CSV.
+- **Histórico e gráfico interativo:** temperatura, vibração ou rotação, escolha de máquinas, ao vivo ou por período (1 hora, 6 horas ou 24 horas, com médias calculadas no servidor) e exportação em CSV.
+- **Comparação e detalhe por máquina:** uma tabela compara as máquinas no período (média, máximo, rotação e alertas, com barras) e a janela de cada máquina tem o seu gráfico de média e máximo, com a linha do limite dela.
 - **Usuários e perfis:** administrador (gerencia usuários), operador (reconhece alertas e troca limites) e somente leitura, com tela de usuários no painel.
 - **Segurança ponta a ponta:** rotas REST e WebSocket protegidas por JWT, senhas em BCrypt, limite de tentativas no login e chave dos tokens por variável de ambiente.
 - **API documentada e observável:** documentação interativa em `/swagger-ui.html` e métricas em formato Prometheus.

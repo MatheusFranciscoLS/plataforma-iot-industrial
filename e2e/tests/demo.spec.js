@@ -30,7 +30,7 @@ test('o botão de demonstração abre o painel e os números mudam ao vivo', asy
   for (const maquina of ['MAQ-01', 'MAQ-02', 'MAQ-03']) {
     await expect(page.getByRole('article', { name: new RegExp(`^${maquina}:`) })).toBeVisible();
   }
-  await expect(page.getByText('Ao vivo')).toBeVisible();
+  await expect(page.locator('header').getByText('Ao vivo')).toBeVisible(); // o status de conexão (o seletor de período do gráfico também tem um "Ao vivo")
 
   // A temperatura de MAQ-01 muda sozinha em poucos segundos (o simulador envia uma leitura nova a cada 2 s)
   const temperatura = page.getByRole('article', { name: /^MAQ-01:/ }).getByRole('meter', { name: 'Temperatura de MAQ-01' });
