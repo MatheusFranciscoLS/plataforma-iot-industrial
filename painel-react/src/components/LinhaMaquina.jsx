@@ -2,7 +2,7 @@ import { AlertTriangle, CircleDot, Clock, Unplug } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useIdioma } from '@/i18n/idioma-contexto';
 import { cn } from '@/lib/utils';
-import { formatarNumero, LIMITE_TEMPERATURA, LIMITE_VIBRACAO } from '@/lib/limites';
+import { formatarNumero, LIMITES_PADRAO } from '@/lib/limites';
 import Medidor from './Medidor';
 import Sparkline from './Sparkline';
 
@@ -32,7 +32,7 @@ function Metrica({ rotulo, children, className }) {
   );
 }
 
-export default function LinhaMaquina({ nome, dado, avaliacao, agora, serie, onDetalhes }) {
+export default function LinhaMaquina({ nome, dado, avaliacao, agora, serie, limites = LIMITES_PADRAO, onDetalhes }) {
   const { t, locale } = useIdioma();
   const { estado, motivos } = avaliacao;
   const { chave, Icone } = ESTADOS[estado];
@@ -80,19 +80,19 @@ export default function LinhaMaquina({ nome, dado, avaliacao, agora, serie, onDe
       ) : (
         <>
           <Metrica rotulo={t('maquina.temperatura')}>
-            <p className={cn('numero text-4xl leading-tight', semSinal && 'text-suave', dado.temperaturaMotor > LIMITE_TEMPERATURA && 'text-alarme')}>
+            <p className={cn('numero text-4xl leading-tight', semSinal && 'text-suave', dado.temperaturaMotor > limites.temperatura && 'text-alarme')}>
               {formatarNumero(dado.temperaturaMotor, 1, 1, locale)}
               <span className="ml-1 text-lg font-medium text-suave">°C</span>
             </p>
-            <Medidor valor={dado.temperaturaMotor} limite={LIMITE_TEMPERATURA} {...TEMP} rotulo={t('maquina.temperaturaDe', { nome })} />
+            <Medidor valor={dado.temperaturaMotor} limite={limites.temperatura}{...TEMP} rotulo={t('maquina.temperaturaDe', { nome })} />
           </Metrica>
 
           <Metrica rotulo={t('maquina.vibracao')}>
-            <p className={cn('numero text-4xl leading-tight', semSinal && 'text-suave', dado.vibracao > LIMITE_VIBRACAO && 'text-alarme')}>
+            <p className={cn('numero text-4xl leading-tight', semSinal && 'text-suave', dado.vibracao > limites.vibracao && 'text-alarme')}>
               {formatarNumero(dado.vibracao, 2, 2, locale)}
               <span className="ml-1 text-lg font-medium text-suave">mm/s</span>
             </p>
-            <Medidor valor={dado.vibracao} limite={LIMITE_VIBRACAO} {...VIB} rotulo={t('maquina.vibracaoDe', { nome })} />
+            <Medidor valor={dado.vibracao} limite={limites.vibracao}{...VIB} rotulo={t('maquina.vibracaoDe', { nome })} />
           </Metrica>
 
           <Metrica rotulo={t('maquina.rotacao')}>
@@ -104,7 +104,7 @@ export default function LinhaMaquina({ nome, dado, avaliacao, agora, serie, onDe
 
       <div className="md:justify-self-end">
         <p className="mb-1 text-sm text-suave md:sr-only">{t('maquina.ultimasTemperaturas')}</p>
-        <Sparkline valores={serie} limite={LIMITE_TEMPERATURA} />
+        <Sparkline valores={serie} limite={limites.temperatura} />
       </div>
     </article>
   );

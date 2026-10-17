@@ -32,16 +32,64 @@ export async function fazerLogin(usuario, senha) {
   return token;
 }
 
-/** Alertas guardados no servidor, do mais novo para o mais antigo. Lança SessaoInvalidaError se o token não vale mais. */
-export async function buscarAlertas(token, limite = 20) {
-  const resposta = await fetch(`${API_JAVA}/api/alertas?limite=${limite}`, {
-    headers: { Authorization: `Bearer ${token}` },
+/** Chama a API com o token. Lança SessaoInvalidaError se o token não vale mais e Error para outras falhas. */
+async function chamar(token, caminho, opcoes = {}) {
+  const { corpo, ...resto } = opcoes;
+  const resposta = await fetch(`${API_JAVA}${caminho}`, {
+    ...resto,
+    headers: {
+      Authorization: `Bearer ${token}`,
+      ...(corpo !== undefined && { 'Content-Type': 'application/json' }),
+    },
+    ...(corpo !== undefined && { body: JSON.stringify(corpo) }),
   });
 
   if (resposta.status === 401 || resposta.status === 403) throw new SessaoInvalidaError();
-  if (!resposta.ok) throw new Error(`Falha ao carregar os alertas (${resposta.status})`);
+  if (!resposta.ok) throw Object.assign(new Error(`Falha na chamada ${caminho} (${resposta.status})`), { status: resposta.status });
 
-  return resposta.json();
+  return resposta;
+}
+
+/**
+ * Alertas guardados no servidor, do mais novo para o mais antigo.
+ * `filtros` (todos opcionais): { maquina, tipo: 'TEMPERATURA' | 'VIBRACAO', reconhecido: true | false }.
+ */
+export async function buscarAlertas(token, limite = 20, filtros = {}) {
+  const parametros = new URLSearchParams({ limite });
+  if (filtros.maquina) parametros.set('maquina', filtros.maquina);
+  if (filtros.tipo) parametros.set('tipo', filtros.tipo);
+  if (typeof filtros.reconhecido === 'boolean') parametros.set('reconhecido', filtros.reconhecido);
+  return (await chamar(token, `/api/alertas?${parametros}`)).json();
+}
+
+/** Quantos alertas ninguém reconheceu ainda. */
+export async function contarAlertasPendentes(token) {
+  const { quantidade } = await (await chamar(token, '/api/alertas/pendentes')).json();
+  return quantidade;
+}
+
+/** Marca o alerta como visto pelo usuário logado e devolve o alerta atualizado. */
+export async function reconhecerAlerta(token, id) {
+  return (await chamar(token, `/api/alertas/${id}/reconhecer`, { method: 'POST' })).json();
+}
+
+/** Os limites padrão e os definidos por máquina: { padrao: { TEMPERATURA, VIBRACAO }, maquinas: [...] }. */
+export async function buscarLimites(token) {
+  return (await chamar(token, '/api/limites')).json();
+}
+
+/** Define o limite de uma máquina. `tipo` é 'TEMPERATURA' ou 'VIBRACAO'. */
+export async function definirLimite(token, maquina, tipo, limite) {
+  return (await chamar(token, `/api/limites/${encodeURIComponent(maquina)}/${tipo}`, { method: 'PUT', corpo: { limite } })).json();
+}
+
+/** Volta uma máquina ao limite padrão. */
+export async function removerLimite(token, maquina, tipo) {
+  try {
+    await chamar(token, `/api/limites/${encodeURIComponent(maquina)}/${tipo}`, { method: 'DELETE' });
+  } catch (falha) {
+    if (falha.status !== 404) throw falha; // 404: já estava no padrão
+  }
 }
 
 /** Busca as últimas leituras. Lança SessaoInvalidaError se o token não vale mais. */

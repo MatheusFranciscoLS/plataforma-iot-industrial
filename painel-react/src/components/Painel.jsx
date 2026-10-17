@@ -3,33 +3,50 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useAgora } from '@/hooks/useAgora';
 import { useIdioma } from '@/i18n/idioma-contexto';
 import { useAlertas } from '@/hooks/useAlertas';
+import { useLimites } from '@/hooks/useLimites';
 import { useTelemetria } from '@/hooks/useTelemetria';
 import { agruparHistorico, MAX_PONTOS, serieDaMaquina } from '@/lib/historico';
 import { METRICA_PADRAO } from '@/lib/metricas';
-import { avaliarMaquina, LIMITE_TEMPERATURA, LIMITE_VIBRACAO, formatarNumero, MAQUINAS, resumirFabrica } from '@/lib/limites';
+import { avaliarMaquina, formatarNumero, MAQUINAS, resumirFabrica } from '@/lib/limites';
 import AlertasRecentes from './AlertasRecentes';
 import DetalheDaMaquina from './DetalheDaMaquina';
 import Cabecalho from './Cabecalho';
+import LimitesDeAlerta from './LimitesDeAlerta';
 import LinhaMaquina from './LinhaMaquina';
 import ResumoFabrica from './ResumoFabrica';
 
 // O Recharts é a maior parte do código da página; ele só é baixado depois que o resto já apareceu.
 const GraficoTemperatura = lazy(() => import('./GraficoTemperatura'));
 
+const ALERTAS_POR_PAGINA = 20;
+const ALERTAS_MAXIMO = 200;
+
 export default function Painel({ token, tema, onAlternarTema, onSair, onSessaoInvalida }) {
   const [pontos, setPontos] = useState(MAX_PONTOS);
   const [metrica, setMetrica] = useState(METRICA_PADRAO);
   const [maquinaAberta, setMaquinaAberta] = useState(null);
+  const [limitesAbertos, setLimitesAbertos] = useState(false);
+  const [filtros, setFiltros] = useState({});
+  const [quantosAlertas, setQuantosAlertas] = useState(ALERTAS_POR_PAGINA);
   const { historico, leituras, statusAtual, conexao, erroHistorico } = useTelemetria(token, onSessaoInvalida, pontos);
   const historicoDoGrafico = useMemo(() => agruparHistorico(leituras, pontos, metrica.id), [leituras, pontos, metrica]);
-  const { alertas, erro: erroAlertas } = useAlertas(token, onSessaoInvalida);
+  const { alertas, pendentes, erro: erroAlertas, erroAoReconhecer, reconhecer } = useAlertas(token, onSessaoInvalida, { limite: quantosAlertas, filtros });
+  const { limitesDe, padrao, recarregar: recarregarLimites } = useLimites(token, onSessaoInvalida);
   const i18n = useIdioma();
   const { t, locale } = i18n;
   const agora = useAgora();
 
-  const avaliacoes = MAQUINAS.map((nome) => avaliarMaquina(statusAtual[nome], agora, i18n));
+  const avaliacoes = MAQUINAS.map((nome) => avaliarMaquina(statusAtual[nome], agora, i18n, limitesDe(nome)));
   const resumo = resumirFabrica(avaliacoes, i18n);
   const afetadas = MAQUINAS.filter((_, i) => (resumo.nivel === 'critico' ? avaliacoes[i].estado === 'critica' : avaliacoes[i].estado === 'sem-sinal' || avaliacoes[i].estado === 'sem-dados'));
+
+  // Cada máquina pode ter limites próprios; o gráfico desenha uma linha para cada valor diferente.
+  const limitesDoGrafico = metrica.limiteDe ? Object.fromEntries(MAQUINAS.map((nome) => [nome, limitesDe(nome)[metrica.limiteDe]])) : null;
+
+  const mudarFiltros = (novos) => {
+    setFiltros(novos);
+    setQuantosAlertas(ALERTAS_POR_PAGINA);
+  };
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-5 sm:px-6 sm:py-8">
@@ -51,7 +68,8 @@ export default function Painel({ token, tema, onAlternarTema, onSair, onSessaoIn
               avaliacao={avaliacoes[i]}
               agora={agora}
               serie={serieDaMaquina(historico, nome)}
-            onDetalhes={setMaquinaAberta}
+              limites={limitesDe(nome)}
+              onDetalhes={setMaquinaAberta}
             />
           ))}
         </div>
@@ -67,27 +85,50 @@ export default function Painel({ token, tema, onAlternarTema, onSair, onSessaoIn
             historico={historicoDoGrafico}
             leituras={leituras}
             metrica={metrica}
+            limitesPorMaquina={limitesDoGrafico}
             onMetrica={setMetrica}
             pontos={pontos}
             onPontos={setPontos}
           />
         </Suspense>
 
-        <AlertasRecentes alertas={alertas} erro={erroAlertas} />
+        <AlertasRecentes
+          alertas={alertas}
+          erro={erroAlertas}
+          erroAoReconhecer={erroAoReconhecer}
+          pendentes={pendentes}
+          filtros={filtros}
+          onFiltros={mudarFiltros}
+          onReconhecer={reconhecer}
+          onMais={alertas.length >= quantosAlertas && quantosAlertas < ALERTAS_MAXIMO ? () => setQuantosAlertas((n) => Math.min(n + ALERTAS_POR_PAGINA * 4, ALERTAS_MAXIMO)) : undefined}
+          onLimites={() => setLimitesAbertos(true)}
+        />
       </main>
 
       {maquinaAberta && (
         <DetalheDaMaquina
           token={token}
           maquina={maquinaAberta}
+          limites={limitesDe(maquinaAberta)}
           aoFechar={() => setMaquinaAberta(null)}
+          onSessaoInvalida={onSessaoInvalida}
+        />
+      )}
+
+      {limitesAbertos && (
+        <LimitesDeAlerta
+          token={token}
+          limitesDe={limitesDe}
+          padrao={padrao}
+          aoSalvar={recarregarLimites}
+          aoFechar={() => setLimitesAbertos(false)}
           onSessaoInvalida={onSessaoInvalida}
         />
       )}
 
       <footer className="mt-8 flex flex-wrap justify-between gap-x-6 gap-y-1 border-t border-linha pt-4 text-sm text-suave">
         <p>
-          {t('painel.rodape', { temp: LIMITE_TEMPERATURA, vib: formatarNumero(LIMITE_VIBRACAO, 1, 1, locale) })}
+          {t('painel.rodape', { temp: formatarNumero(padrao.temperatura, 1, 0, locale), vib: formatarNumero(padrao.vibracao, 1, 1, locale) })}
         </p>
         <a
           className="underline underline-offset-4 hover:text-tinta"

@@ -8,31 +8,40 @@ import { formatarNumero } from '@/lib/limites';
 import { SERIES } from '@/lib/series';
 import ControlesDoGrafico from './ControlesDoGrafico';
 
-function BalaoDoGrafico({ active, payload, label, metrica, hora, locale }) {
+function BalaoDoGrafico({ active, payload, label, metrica, limitesPorMaquina, hora, locale }) {
   if (!active || !payload?.length) return null;
   return (
     <div className="rounded border border-linha bg-painel px-3 py-2 text-sm shadow-md">
       <p className="mb-1 font-semibold">{hora(label)}</p>
-      {payload.map((p) => (
+      {payload.map((p) => {
+        const limiteDaMaquina = limitesPorMaquina?.[p.dataKey] ?? metrica.limite;
+        return (
         <p key={p.dataKey} className="flex justify-between gap-4">
           <span className="text-suave">{p.dataKey}</span>
-          <span className={`numero ${metrica.limite !== null && p.value > metrica.limite ? 'text-alarme' : ''}`}>
+          <span className={`numero ${limiteDaMaquina !== null && p.value > limiteDaMaquina ? 'text-alarme' : ''}`}>
             {formatarNumero(p.value, metrica.casas, metrica.casas, locale)} {metrica.unidade}
           </span>
         </p>
-      ))}
+        );
+      })}
     </div>
   );
 }
 
-/** Gráfico de linhas de uma grandeza (temperatura, vibração ou rotação), uma linha por máquina. */
-export default function GraficoTemperatura({ historico, leituras, metrica, onMetrica, pontos, onPontos }) {
+/**
+ * Gráfico de linhas de uma grandeza (temperatura, vibração ou rotação), uma linha por máquina.
+ * `limitesPorMaquina` ({ 'MAQ-01': 95, ... }) traz o limite de cada máquina; sem ele vale o limite padrão da grandeza.
+ */
+export default function GraficoTemperatura({ historico, leituras, metrica, limitesPorMaquina = null, onMetrica, pontos, onPontos }) {
   const { t, locale } = useIdioma();
   const hora = (timestamp) => new Date(timestamp * 1000).toLocaleTimeString(locale);
   const grandeza = t(`metrica.${metrica.id}`);
   const vazio = historico.length === 0;
   const [ocultas, setOcultas] = useState(() => new Set());
   const { limite } = metrica;
+  // Um limite por máquina: as linhas tracejadas são só as de valores diferentes (todas iguais = uma linha).
+  const limites =
+    limite === null ? [] : [...new Set(limitesPorMaquina ? Object.values(limitesPorMaquina) : [limite])].sort((a, b) => a - b);
 
   const alternar = (maquina) =>
     setOcultas((atual) => {
@@ -49,8 +58,8 @@ export default function GraficoTemperatura({ historico, leituras, metrica, onMet
     limite === null
       ? [(min) => Math.max(0, Math.floor(min - margem)), (max) => Math.ceil(max + margem)]
       : [
-          (min) => Math.max(0, arredondar(Math.min(min, limite) - margem)),
-          (max) => arredondar(Math.max(max, limite) + margem),
+          (min) => Math.max(0, arredondar(Math.min(min, ...limites) - margem)),
+          (max) => arredondar(Math.max(max, ...limites) + margem),
         ];
 
   return (
@@ -78,6 +87,7 @@ export default function GraficoTemperatura({ historico, leituras, metrica, onMet
           onPontos={onPontos}
           metrica={metrica}
           onMetrica={onMetrica}
+          limites={limites}
         />
       </div>
 
@@ -87,7 +97,7 @@ export default function GraficoTemperatura({ historico, leituras, metrica, onMet
           limite:
             limite !== null
               ? t('grafico.descricaoLimite', {
-                  valor: formatarNumero(limite, metrica.casasLimite, metrica.casasLimite, locale),
+                  valor: limites.map((l) => formatarNumero(l, metrica.casasLimite, metrica.casasLimite, locale)).join(' / '),
                   unidade: metrica.unidade,
                 })
               : '',
@@ -120,8 +130,10 @@ export default function GraficoTemperatura({ historico, leituras, metrica, onMet
               stroke="rgb(var(--suave))"
               tick={{ fill: 'rgb(var(--suave))', fontSize: 12 }}
             />
-            {limite !== null && <ReferenceLine y={limite} stroke="rgb(var(--alarme))" strokeDasharray="6 4" strokeWidth={1.5} />}
-            <Tooltip content={<BalaoDoGrafico metrica={metrica} hora={hora} locale={locale} />} cursor={{ stroke: 'rgb(var(--suave))', strokeDasharray: '3 3' }} />
+            {limites.map((valor) => (
+              <ReferenceLine key={valor} y={valor} stroke="rgb(var(--alarme))" strokeDasharray="6 4" strokeWidth={1.5} />
+            ))}
+            <Tooltip content={<BalaoDoGrafico metrica={metrica} limitesPorMaquina={limitesPorMaquina} hora={hora} locale={locale} />} cursor={{ stroke: 'rgb(var(--suave))', strokeDasharray: '3 3' }} />
             {SERIES.map(({ chave, cor, traco }) => (
               <Line
                 key={chave}

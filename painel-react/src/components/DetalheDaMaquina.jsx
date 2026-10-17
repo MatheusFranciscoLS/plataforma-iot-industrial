@@ -1,14 +1,14 @@
 import { useIdioma } from '@/i18n/idioma-contexto';
 import { useLeiturasDaMaquina } from '@/hooks/useLeiturasDaMaquina';
 import { resumirLeituras } from '@/lib/estatisticas';
-import { formatarNumero, motivosDaLeitura } from '@/lib/limites';
+import { formatarNumero, LIMITES_PADRAO, motivosDaLeitura } from '@/lib/limites';
 import { METRICAS } from '@/lib/metricas';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 
 const CAMPO_DO_RESUMO = { temperaturaMotor: 'temperatura', vibracao: 'vibracao', rpm: 'rpm' };
 
-function Estatisticas({ resumo }) {
+function Estatisticas({ resumo, limites }) {
   const { t, locale } = useIdioma();
   const hora = (timestamp) => new Date(timestamp * 1000).toLocaleTimeString(locale);
 
@@ -44,7 +44,7 @@ function Estatisticas({ resumo }) {
                 <th scope="row" className="py-2 pr-3 font-medium">{t(`metrica.${m.id}`)}</th>
                 <td className="numero py-2 pr-3 text-base">{valor(linha.min)}</td>
                 <td className="numero py-2 pr-3 text-base">{valor(linha.media)}</td>
-                <td className={cn('numero py-2 text-base', m.limite !== null && linha.max > m.limite && 'text-alarme')}>{valor(linha.max)}</td>
+                <td className={cn('numero py-2 text-base', m.limiteDe && linha.max > limites[m.limiteDe] && 'text-alarme')}>{valor(linha.max)}</td>
               </tr>
             );
           })}
@@ -54,7 +54,7 @@ function Estatisticas({ resumo }) {
   );
 }
 
-function UltimasLeituras({ leituras }) {
+function UltimasLeituras({ leituras, limites }) {
   const i18n = useIdioma();
   const { t, locale } = i18n;
   const recentes = [...leituras].sort((a, b) => b.timestamp - a.timestamp).slice(0, 10);
@@ -73,7 +73,7 @@ function UltimasLeituras({ leituras }) {
         </thead>
         <tbody>
           {recentes.map((l, i) => {
-            const motivos = motivosDaLeitura(l, i18n);
+            const motivos = motivosDaLeitura(l, i18n, limites);
             return (
               <tr key={l.id ?? i} className={cn('border-b border-linha', motivos.length > 0 && 'text-alarme')}>
                 <td className="numero py-1.5 pr-3 text-base">{new Date(l.timestamp * 1000).toLocaleTimeString(locale)}</td>
@@ -90,10 +90,10 @@ function UltimasLeituras({ leituras }) {
 }
 
 /** Janela com os números de uma máquina: estatísticas das últimas leituras e a lista das mais recentes. */
-export default function DetalheDaMaquina({ token, maquina, aoFechar, onSessaoInvalida }) {
+export default function DetalheDaMaquina({ token, maquina, limites = LIMITES_PADRAO, aoFechar, onSessaoInvalida }) {
   const { t } = useIdioma();
   const { leituras, carregando, erro } = useLeiturasDaMaquina(token, maquina, onSessaoInvalida);
-  const resumo = resumirLeituras(leituras);
+  const resumo = resumirLeituras(leituras, limites);
 
   return (
     <Dialog open onOpenChange={(aberto) => !aberto && aoFechar()}>
@@ -108,8 +108,8 @@ export default function DetalheDaMaquina({ token, maquina, aoFechar, onSessaoInv
         {!carregando && !erro && !resumo && <p className="text-sm text-suave">{t('detalhe.vazio')}</p>}
         {resumo && (
           <>
-            <Estatisticas resumo={resumo} />
-            <UltimasLeituras leituras={leituras} />
+            <Estatisticas resumo={resumo} limites={limites} />
+            <UltimasLeituras leituras={leituras} limites={limites} />
           </>
         )}
       </DialogContent>
