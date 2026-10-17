@@ -37,8 +37,11 @@ export async function buscarAlertas(token, limite = 20) {
 }
 
 /** Busca as últimas leituras. Lança SessaoInvalidaError se o token não vale mais. */
-export async function buscarHistorico(token, limite) {
-  const consulta = limite ? `?limite=${limite}` : '';
+export async function buscarHistorico(token, limite, maquina) {
+  const parametros = new URLSearchParams();
+  if (limite) parametros.set('limite', limite);
+  if (maquina) parametros.set('maquina', maquina);
+  const consulta = parametros.size > 0 ? `?${parametros}` : '';
   const resposta = await fetch(`${API_JAVA}/api/sensores${consulta}`, {
     headers: { Authorization: `Bearer ${token}` },
   });

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { adicionarLeitura, agruparHistorico, MAX_PONTOS, mesclarLeituras, serieDaMaquina, ultimasLeituras } from './historico';
 import { gerarCsv } from './csv';
+import { resumirLeituras } from './estatisticas';
 import { avaliarMaquina, descreverAlerta, motivosDaLeitura, resumirFabrica, SEM_SINAL_APOS_S } from './limites';
 import { lerExpiracao, tokenExpirado } from './token';
 
@@ -98,6 +99,29 @@ describe('resumirFabrica', () => {
 
   it('tudo normal', () => {
     expect(resumirFabrica(av('normal', 'normal', 'normal')).texto).toBe('Tudo normal');
+  });
+});
+
+describe('resumirLeituras', () => {
+  it('sem leituras não há resumo', () => {
+    expect(resumirLeituras([])).toBeNull();
+  });
+
+  it('calcula mínimo, média e máximo de cada grandeza, o período e quantas passaram de um limite', () => {
+    const resumo = resumirLeituras([
+      { timestamp: 100, temperaturaMotor: 80, vibracao: 2, rpm: 1000 },
+      { timestamp: 110, temperaturaMotor: 100, vibracao: 4, rpm: 2000 }, // passa da temperatura
+      { timestamp: 120, temperaturaMotor: 90, vibracao: 6, rpm: 3000 }, // passa da vibração
+      { timestamp: 130, temperaturaMotor: 70, vibracao: 3, rpm: 2000 },
+    ]);
+
+    expect(resumo.quantidade).toBe(4);
+    expect(resumo.inicio).toBe(100);
+    expect(resumo.fim).toBe(130);
+    expect(resumo.temperatura).toEqual({ min: 70, media: 85, max: 100 });
+    expect(resumo.vibracao).toEqual({ min: 2, media: 3.75, max: 6 });
+    expect(resumo.rpm).toEqual({ min: 1000, media: 2000, max: 3000 });
+    expect(resumo.acimaDoLimite).toEqual({ quantidade: 2, percentual: 50 });
   });
 });
 

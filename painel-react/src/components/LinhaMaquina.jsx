@@ -1,4 +1,5 @@
 import { AlertTriangle, CircleDot, Clock, Unplug } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { formatarNumero, LIMITE_TEMPERATURA, LIMITE_VIBRACAO } from '@/lib/limites';
 import Medidor from './Medidor';
@@ -30,7 +31,7 @@ function Metrica({ rotulo, children, className }) {
   );
 }
 
-export default function LinhaMaquina({ nome, dado, avaliacao, agora, serie }) {
+export default function LinhaMaquina({ nome, dado, avaliacao, agora, serie, onDetalhes }) {
   const { estado, motivos } = avaliacao;
   const { texto, Icone } = ESTADOS[estado];
   const critica = estado === 'critica';
@@ -66,6 +67,9 @@ export default function LinhaMaquina({ nome, dado, avaliacao, agora, serie }) {
           </ul>
         )}
         {dado && <p className="mt-1 text-xs text-suave">Atualizada {haQuantoTempo(dado.recebidoEm, agora)}</p>}
+        <Button variant="outline" size="sm" className="mt-2" onClick={() => onDetalhes(nome)} aria-label={`Ver detalhes de ${nome}`}>
+          Ver detalhes
+        </Button>
       </div>
 
       {semDados ? (

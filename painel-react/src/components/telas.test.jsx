@@ -8,6 +8,7 @@ import LinhaMaquina from './LinhaMaquina';
 import ResumoFabrica from './ResumoFabrica';
 import ControlesDoGrafico from './ControlesDoGrafico';
 import AlertasRecentes from './AlertasRecentes';
+import DetalheDaMaquina from './DetalheDaMaquina';
 import { METRICAS } from '@/lib/metricas';
 import { avaliarMaquina, resumirFabrica } from '@/lib/limites';
 
@@ -170,6 +171,76 @@ describe('AlertasRecentes', () => {
 
     expect(screen.getByRole('alert')).toHaveTextContent('Não foi possível atualizar os alertas');
     expect(screen.getAllByRole('listitem')).toHaveLength(1);
+  });
+});
+
+describe('DetalheDaMaquina', () => {
+  const leiturasDaApi = [
+    { id: 3, idMaquina: 'MAQ-01', timestamp: 130, temperaturaMotor: 100, vibracao: 2, rpm: 2000 },
+    { id: 2, idMaquina: 'MAQ-01', timestamp: 120, temperaturaMotor: 80, vibracao: 2.5, rpm: 1800 },
+    { id: 1, idMaquina: 'MAQ-01', timestamp: 110, temperaturaMotor: 60, vibracao: 1.5, rpm: 1600 },
+  ];
+  const mockarApi = (resposta) => vi.stubGlobal('fetch', vi.fn().mockResolvedValue(resposta));
+
+  it('busca as leituras só daquela máquina e mostra mínimo, média e máximo', async () => {
+    mockarApi({ ok: true, status: 200, json: async () => leiturasDaApi });
+    render(<DetalheDaMaquina token="t" maquina="MAQ-01" aoFechar={vi.fn()} onSessaoInvalida={vi.fn()} />);
+
+    const janela = await screen.findByRole('dialog', { name: 'MAQ-01' });
+    expect(await screen.findByText(/3 leituras/)).toBeInTheDocument();
+    expect(fetch.mock.calls[0][0]).toContain('maquina=MAQ-01');
+    expect(fetch.mock.calls[0][0]).toContain('limite=500');
+
+    const temperatura = screen.getByRole('row', { name: /^Temperatura\s+\d/ });
+    expect(temperatura).toHaveTextContent('60,0 °C'); // mínimo
+    expect(temperatura).toHaveTextContent('80,0 °C'); // média
+    expect(temperatura).toHaveTextContent('100,0 °C'); // máximo
+    expect(janela).toHaveTextContent('1 passaram de algum limite (33,3%)');
+  });
+
+  it('lista as últimas leituras, da mais nova para a mais antiga', async () => {
+    mockarApi({ ok: true, status: 200, json: async () => leiturasDaApi });
+    render(<DetalheDaMaquina token="t" maquina="MAQ-01" aoFechar={vi.fn()} onSessaoInvalida={vi.fn()} />);
+
+    await screen.findByText(/3 leituras/);
+    const tabela = screen.getByRole('heading', { name: 'Últimas leituras' }).parentElement;
+    const linhas = tabela.querySelectorAll('tbody tr');
+    expect(linhas).toHaveLength(3);
+    expect(linhas[0]).toHaveTextContent('100,0 °C'); // a de timestamp 130
+    expect(linhas[2]).toHaveTextContent('60,0 °C');
+  });
+
+  it('sem leituras, diz isso', async () => {
+    mockarApi({ ok: true, status: 200, json: async () => [] });
+    render(<DetalheDaMaquina token="t" maquina="MAQ-02" aoFechar={vi.fn()} onSessaoInvalida={vi.fn()} />);
+
+    expect(await screen.findByText('Esta máquina ainda não tem leituras.')).toBeInTheDocument();
+  });
+
+  it('se a API falhar, mostra o erro', async () => {
+    mockarApi({ ok: false, status: 500, json: async () => ({}) });
+    render(<DetalheDaMaquina token="t" maquina="MAQ-01" aoFechar={vi.fn()} onSessaoInvalida={vi.fn()} />);
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Não foi possível carregar as leituras desta máquina');
+  });
+
+  it('se o token não vale mais, avisa o app para voltar ao login', async () => {
+    mockarApi({ ok: false, status: 403, json: async () => ({}) });
+    const onSessaoInvalida = vi.fn();
+    render(<DetalheDaMaquina token="t" maquina="MAQ-01" aoFechar={vi.fn()} onSessaoInvalida={onSessaoInvalida} />);
+
+    await waitFor(() => expect(onSessaoInvalida).toHaveBeenCalled());
+  });
+
+  it('fecha com a tecla Esc', async () => {
+    mockarApi({ ok: true, status: 200, json: async () => leiturasDaApi });
+    const aoFechar = vi.fn();
+    render(<DetalheDaMaquina token="t" maquina="MAQ-01" aoFechar={aoFechar} onSessaoInvalida={vi.fn()} />);
+    await screen.findByText(/3 leituras/);
+
+    await userEvent.setup().keyboard('{Escape}');
+
+    expect(aoFechar).toHaveBeenCalled();
   });
 });
 

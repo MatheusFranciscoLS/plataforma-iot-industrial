@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { act, render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // O socket é falso: o teste guarda os "ouvintes" e dispara os eventos à mão.
@@ -136,6 +137,16 @@ describe('App', () => {
     // Quando uma leitura chega pelo tempo real de novo, volta a "Ao vivo".
     act(() => socketFalso.emitir('novoRegistro', { id: 12, idMaquina: 'MAQ-03', timestamp: agoraS + 5, temperaturaMotor: 80, vibracao: 2, rpm: 1500 }));
     expect(screen.getByText('Ao vivo')).toBeInTheDocument();
+  });
+
+  it('o botão Ver detalhes abre a janela da máquina e busca as leituras só dela', async () => {
+    localStorage.setItem('token', tokenValido());
+    render(<App />);
+
+    await userEvent.setup().click(await screen.findByRole('button', { name: 'Ver detalhes de MAQ-02' }));
+
+    expect(await screen.findByRole('dialog', { name: 'MAQ-02' })).toBeInTheDocument();
+    expect(fetch.mock.calls.some(([url]) => String(url).includes('maquina=MAQ-02'))).toBe(true);
   });
 
   it('queda de conexão aparece como "Reconectando"', async () => {
