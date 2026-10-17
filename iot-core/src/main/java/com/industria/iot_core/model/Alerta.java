@@ -43,6 +43,13 @@ public class Alerta {
     @Column(name = "data_registro", nullable = false)
     private LocalDateTime dataRegistro = LocalDateTime.now();
 
+    // Quem viu o alerta e quando; vazios enquanto ninguém reconheceu.
+    @Column(name = "reconhecido_por", length = 50)
+    private String reconhecidoPor;
+
+    @Column(name = "reconhecido_em")
+    private LocalDateTime reconhecidoEm;
+
     protected Alerta() {
         // exigido pelo JPA
     }
@@ -62,4 +69,14 @@ public class Alerta {
     public Double getValor() { return valor; }
     public Double getLimite() { return limite; }
     public LocalDateTime getDataRegistro() { return dataRegistro; }
+    public String getReconhecidoPor() { return reconhecidoPor; }
+    public LocalDateTime getReconhecidoEm() { return reconhecidoEm; }
+
+    /** Marca o alerta como visto. Quem reconheceu primeiro fica registrado; reconhecer de novo não muda nada. */
+    public void reconhecer(String usuario) {
+        if (reconhecidoPor == null) {
+            reconhecidoPor = usuario;
+            reconhecidoEm = LocalDateTime.now();
+        }
+    }
 }
