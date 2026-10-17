@@ -6,6 +6,7 @@ const CHAVES = {
   conectando: 'conexao.conectando',
   reconectando: 'conexao.reconectando',
   'por-consulta': 'conexao.porConsulta',
+  simulado: 'conexao.simulado',
 };
 
 export default function StatusConexao({ conexao }) {
@@ -23,7 +24,7 @@ export default function StatusConexao({ conexao }) {
           className="h-2.5 w-2.5 rounded-full bg-tinta motion-safe:animate-[pulso-ao-vivo_2s_ease-in-out_infinite]"
         />
       )}
-      {conexao === 'conectando' && <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin text-suave" />}
+      {(conexao === 'conectando' || conexao === 'simulado') && <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin text-suave" />}
       {conexao === 'por-consulta' && <RefreshCw aria-hidden="true" className="h-4 w-4 text-suave" />}
       {conexao === 'reconectando' && <WifiOff aria-hidden="true" className="h-4 w-4 text-alarme" />}
       <span className={conexao === 'reconectando' ? 'text-alarme' : undefined}>{t(CHAVES[conexao])}</span>

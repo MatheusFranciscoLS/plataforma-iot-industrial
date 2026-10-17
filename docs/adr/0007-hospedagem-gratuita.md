@@ -17,6 +17,7 @@
   Medido no Render depois da mudança: a subida caiu de **137–147 s para 62 s**.
 - **Aviso antecipado:** a tela de login chama a rota de saúde da API e do gateway assim que abre; enquanto a pessoa lê a página, eles já estão acordando.
   Se a espera passar de poucos segundos, o painel explica que o servidor está acordando.
+- **Demonstração instantânea:** o botão "Ver o painel de demonstração" mostra na hora uma simulação feita no navegador (leituras sorteadas por `simulacaoLocal.js`, com um aviso) e faz o login por trás. Quando o login responde, a tela troca sozinha pelos dados reais. Quem sai da simulação antes disso não é levado ao painel depois.
 - **Pool de conexões pequeno** (5) e `open-in-view` desligado, por causa do limite de conexões do banco.
 - **"Modo candidatura":** um agendamento do GitHub Actions que chama a API e o gateway a cada 10 minutos, **só quando a variável do repositório `MANTER_ACORDADO` vale `true`**.
   Fica desligado por padrão para não gastar as horas gratuitas à toa; liga-se nos dias de divulgar o projeto.
@@ -24,7 +25,7 @@
 
 ## O que não dá para resolver com código
 
-Manter a API sempre acordada o tempo todo só com um plano pago (ou outra hospedagem). A decisão do projeto é aceitar o sono e reduzir a espera.
+Manter a API sempre acordada o tempo todo só com um plano pago (ou outra hospedagem). Mesmo com um serviço de ping gratuito, o Render dá 750 horas por mês para todos os serviços gratuitos da conta somados: uma API acordada 24 horas gasta 744 sozinha e deixaria os outros projetos da conta sem horas. A decisão do projeto é aceitar o sono e reduzir a espera.
 
 ## O que foi descartado
 
