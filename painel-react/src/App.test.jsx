@@ -41,6 +41,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.useRealTimers();
   vi.unstubAllGlobals();
 });
 
@@ -92,6 +93,41 @@ describe('App', () => {
 
     await waitFor(() => expect(fetchFalso.mock.calls.at(-1)[0]).toContain('/api/sensores?limite=180')); // 60 x 3
     expect(socketFalso.disconnect).not.toHaveBeenCalled();
+  });
+
+  it('se o tempo real ficar mudo, o painel busca as leituras novas na API e avisa que atualiza por consulta', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    localStorage.setItem('token', tokenValido());
+    const agoraS = Math.floor(Date.now() / 1000);
+    const novas = [
+      { id: 10, idMaquina: 'MAQ-01', timestamp: agoraS, temperaturaMotor: 99, vibracao: 2, rpm: 1800 },
+      { id: 11, idMaquina: 'MAQ-02', timestamp: agoraS, temperaturaMotor: 70, vibracao: 2, rpm: 1800 },
+    ];
+    // Histórico inicial (limite=60) vem vazio; a consulta de reserva (limite=6) traz as leituras novas.
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url) => ({
+        ok: true,
+        status: 200,
+        json: async () => (/limite=6$/.test(String(url)) ? novas : []),
+      })),
+    );
+    render(<App />);
+    await screen.findByRole('heading', { name: 'Monitoramento da fábrica' });
+    act(() => socketFalso.emitir('connect'));
+    expect(screen.getByText('Ao vivo')).toBeInTheDocument();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(12000);
+    });
+
+    expect(screen.getByText('Atualizando por consulta')).toBeInTheDocument();
+    expect(screen.getByRole('article', { name: 'MAQ-01: Crítica' })).toBeInTheDocument();
+    expect(screen.getByRole('article', { name: 'MAQ-02: Normal' })).toBeInTheDocument();
+
+    // Quando uma leitura chega pelo tempo real de novo, volta a "Ao vivo".
+    act(() => socketFalso.emitir('novoRegistro', { id: 12, idMaquina: 'MAQ-03', timestamp: agoraS + 5, temperaturaMotor: 80, vibracao: 2, rpm: 1500 }));
+    expect(screen.getByText('Ao vivo')).toBeInTheDocument();
   });
 
   it('queda de conexão aparece como "Reconectando"', async () => {
