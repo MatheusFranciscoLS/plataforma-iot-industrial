@@ -3,6 +3,8 @@ package com.industria.iot_core.controller;
 import com.industria.iot_core.model.Usuario;
 import com.industria.iot_core.model.Usuario.Perfil;
 import com.industria.iot_core.repository.UsuarioRepository;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
@@ -25,6 +27,7 @@ import org.springframework.web.server.ResponseStatusException;
 import java.util.List;
 
 /** Gerência de usuários. Só o perfil ADMIN chega aqui (regra no SecurityConfig). A senha nunca sai nas respostas. */
+@Tag(name = "Usuários", description = "Gerência de usuários (só ADMIN)")
 @RestController
 @RequestMapping("/api/usuarios")
 public class UsuarioController {
@@ -60,11 +63,13 @@ public class UsuarioController {
         this.encoder = encoder;
     }
 
+    @Operation(summary = "Lista os usuários", description = "Nunca devolve senha nem hash.")
     @GetMapping
     public List<UsuarioResumo> listar() {
         return usuarios.findAllByOrderByNomeAsc().stream().map(UsuarioResumo::de).toList();
     }
 
+    @Operation(summary = "Cria um usuário", description = "409 se o nome já existe. Senha de 8 a 72 caracteres.")
     @PostMapping
     @Transactional
     public ResponseEntity<UsuarioResumo> criar(@Valid @RequestBody NovoUsuario pedido) {
@@ -76,6 +81,7 @@ public class UsuarioController {
     }
 
     /** Troca a senha de qualquer usuário (inclusive a do próprio administrador). */
+    @Operation(summary = "Troca a senha de um usuário")
     @PutMapping("/{nome}/senha")
     @Transactional
     public ResponseEntity<Void> trocarSenha(@PathVariable String nome, @Valid @RequestBody NovaSenha pedido) {
@@ -86,6 +92,7 @@ public class UsuarioController {
     }
 
     /** Troca o perfil. O sistema nunca fica sem administrador. */
+    @Operation(summary = "Troca o perfil de um usuário", description = "O sistema nunca fica sem administrador (409).")
     @PutMapping("/{nome}/perfil")
     @Transactional
     public UsuarioResumo trocarPerfil(@PathVariable String nome, @Valid @RequestBody NovoPerfil pedido) {
@@ -98,6 +105,7 @@ public class UsuarioController {
     }
 
     /** Apaga o usuário. Ninguém apaga a si mesmo, e o último administrador fica. */
+    @Operation(summary = "Apaga um usuário", description = "Ninguém apaga a si mesmo, e o último administrador fica (409).")
     @DeleteMapping("/{nome}")
     @Transactional
     public ResponseEntity<Void> apagar(@PathVariable String nome, Authentication autenticacao) {

@@ -3,6 +3,8 @@ package com.industria.iot_core.controller;
 import com.industria.iot_core.model.Alerta;
 import com.industria.iot_core.model.LimiteMaquina;
 import com.industria.iot_core.service.LimiteService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
@@ -23,6 +25,7 @@ import java.util.Map;
 import java.util.regex.Pattern;
 
 /** Limites de alerta: o padrão da API e os que foram definidos para cada máquina. */
+@Tag(name = "Limites", description = "Limite de alerta padrão e o de cada máquina")
 @RestController
 @RequestMapping("/api/limites")
 public class LimiteController {
@@ -49,12 +52,14 @@ public class LimiteController {
         this.limites = limites;
     }
 
+    @Operation(summary = "Limites padrão e os definidos por máquina", description = "Qualquer perfil.")
     @GetMapping
     public Limites listar() {
         return new Limites(limites.padrao(), limites.listarProprios().stream().map(LimiteDaMaquina::de).toList());
     }
 
     /** Define o limite de uma máquina (cria ou troca). Vale a partir da próxima leitura recebida. */
+    @Operation(summary = "Define o limite de uma máquina", description = "ADMIN ou OPERADOR. tipo: TEMPERATURA ou VIBRACAO.")
     @PutMapping("/{maquina}/{tipo}")
     public LimiteDaMaquina definir(@PathVariable String maquina, @PathVariable Alerta.Tipo tipo, @Valid @RequestBody LimiteRequest pedido) {
         exigirMaquinaValida(maquina);
@@ -62,6 +67,7 @@ public class LimiteController {
     }
 
     /** Volta ao limite padrão. */
+    @Operation(summary = "Volta a máquina ao limite padrão", description = "ADMIN ou OPERADOR. 404 se ela já usava o padrão.")
     @DeleteMapping("/{maquina}/{tipo}")
     public ResponseEntity<Void> remover(@PathVariable String maquina, @PathVariable Alerta.Tipo tipo) {
         exigirMaquinaValida(maquina);

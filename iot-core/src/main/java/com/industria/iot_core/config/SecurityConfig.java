@@ -45,6 +45,10 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.POST, "/api/sensores").permitAll()
                 // Verificação de saúde, para a hospedagem e o Docker saberem se a API está de pé
                 .requestMatchers(HttpMethod.GET, "/actuator/health").permitAll()
+                // Documentação da API (só descreve as rotas; as rotas em si continuam protegidas)
+                .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
+                // Métricas e demais rotas do actuator: só ADMIN
+                .requestMatchers("/actuator/**").hasRole("ADMIN")
                 // Erros de validação (400) são reenviados internamente para /error; sem isso viram 403
                 .requestMatchers("/error").permitAll()
                 // Gerenciar usuários: só ADMIN

@@ -21,4 +21,6 @@ USER iot
 COPY --from=build /app/target/*.jar app.jar
 
 EXPOSE 8080
-CMD ["java", "-jar", "app.jar"]
+# Memória: em container pequeno (a hospedagem gratuita tem 512 MB), o coletor de lixo simples e uma fatia
+# maior da memória para o heap deixam a API mais enxuta do que o padrão do Java.
+CMD ["java", "-XX:+UseSerialGC", "-XX:MaxRAMPercentage=60", "-jar", "app.jar"]

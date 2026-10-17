@@ -3,6 +3,7 @@ package com.industria.iot_core.service;
 import com.industria.iot_core.model.Alerta;
 import com.industria.iot_core.model.RegistroSensor;
 import com.industria.iot_core.repository.AlertaRepository;
+import io.micrometer.core.instrument.MeterRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -27,9 +28,12 @@ public class AlertaService {
     // chave: máquina + tipo; valor: se a leitura anterior já estava acima do limite
     private final Map<String, Boolean> acima = new ConcurrentHashMap<>();
 
-    public AlertaService(AlertaRepository repository, LimiteService limites) {
+    private final MeterRegistry metricas;
+
+    public AlertaService(AlertaRepository repository, LimiteService limites, MeterRegistry metricas) {
         this.repository = repository;
         this.limites = limites;
+        this.metricas = metricas;
     }
 
     public void avaliar(RegistroSensor leitura) {
@@ -47,6 +51,7 @@ public class AlertaService {
         if (estaAcima && !Boolean.TRUE.equals(estavaAcima)) {
             repository.save(new Alerta(leitura.getIdMaquina(), leitura.getTimestamp(), tipo, valor, limite));
             log.info("Alerta: {} passou do limite de {} ({} > {})", leitura.getIdMaquina(), tipo, valor, limite);
+            metricas.counter("iot.alertas.gerados", "tipo", tipo.name()).increment();
         }
     }
 }

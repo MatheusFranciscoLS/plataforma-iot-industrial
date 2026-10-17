@@ -4,6 +4,9 @@ import com.industria.iot_core.model.Usuario;
 import com.industria.iot_core.repository.UsuarioRepository;
 import com.industria.iot_core.security.LimiteDeTentativas;
 import com.industria.iot_core.security.TokenService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirements;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,6 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Optional;
 
+@Tag(name = "Login", description = "Entrada no sistema")
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
@@ -44,6 +48,9 @@ public class AuthController {
     public record LoginRequest(String usuario, String senha) {}
     public record LoginResponse(String token) {}
 
+    @Operation(summary = "Faz o login e devolve o token JWT",
+            description = "401 se usuário ou senha estiverem errados; 429 depois de muitas tentativas seguidas.")
+    @SecurityRequirements // rota pública: sem o cadeado na documentação
     @PostMapping("/login")
     public ResponseEntity<?> fazerLogin(@RequestBody LoginRequest request, HttpServletRequest http) {
         String nome = request.usuario() == null ? "" : request.usuario();
