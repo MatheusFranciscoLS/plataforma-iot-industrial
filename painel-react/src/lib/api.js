@@ -24,6 +24,18 @@ export async function fazerLogin(usuario, senha) {
   return token;
 }
 
+/** Alertas guardados no servidor, do mais novo para o mais antigo. Lança SessaoInvalidaError se o token não vale mais. */
+export async function buscarAlertas(token, limite = 20) {
+  const resposta = await fetch(`${API_JAVA}/api/alertas?limite=${limite}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  if (resposta.status === 401 || resposta.status === 403) throw new SessaoInvalidaError();
+  if (!resposta.ok) throw new Error(`Falha ao carregar os alertas (${resposta.status})`);
+
+  return resposta.json();
+}
+
 /** Busca as últimas leituras. Lança SessaoInvalidaError se o token não vale mais. */
 export async function buscarHistorico(token, limite) {
   const consulta = limite ? `?limite=${limite}` : '';

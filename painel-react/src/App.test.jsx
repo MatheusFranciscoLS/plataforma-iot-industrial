@@ -33,11 +33,17 @@ const leitura = (extra = {}) => ({
   ...extra,
 });
 
+// Responde por endereço: o histórico e os alertas chegam do servidor; `alertas` é o que /api/alertas devolve.
+let alertasDoServidor = [];
+const fetchPorUrl = () =>
+  vi.fn(async (url) => ({ ok: true, status: 200, json: async () => (String(url).includes('/api/alertas') ? alertasDoServidor : []) }));
+
 beforeEach(() => {
+  alertasDoServidor = [];
   localStorage.clear();
   socketFalso.ouvintes = {};
   socketFalso.disconnect.mockClear();
-  vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => [] }));
+  vi.stubGlobal('fetch', fetchPorUrl());
 });
 
 afterEach(() => {
@@ -76,7 +82,9 @@ describe('App', () => {
     expect(screen.getByRole('status', { name: 'Resumo da fábrica' })).toHaveTextContent('1 máquina em estado crítico');
     expect(screen.getByRole('article', { name: 'MAQ-01: Crítica' })).toBeInTheDocument();
     expect(screen.getByRole('article', { name: 'MAQ-02: Normal' })).toBeInTheDocument();
-    expect(screen.getByRole('region', { name: 'Alertas recentes' })).toHaveTextContent('Temperatura acima de 95 °C');
+    // Os alertas vêm do servidor (consulta a cada 5 s); aqui só confirmamos que a seção existe e consulta a rota certa.
+    expect(screen.getByRole('region', { name: 'Alertas recentes' })).toBeInTheDocument();
+    expect(fetch.mock.calls.some(([url]) => String(url).includes('/api/alertas?limite=20'))).toBe(true);
   });
 
   it('pedir mais pontos no gráfico busca um histórico maior e não reconecta o tempo real', async () => {
