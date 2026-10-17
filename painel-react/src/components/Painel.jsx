@@ -8,9 +8,11 @@ import { useTelemetria } from '@/hooks/useTelemetria';
 import { agruparHistorico, MAX_PONTOS, serieDaMaquina } from '@/lib/historico';
 import { METRICA_PADRAO } from '@/lib/metricas';
 import { avaliarMaquina, formatarNumero, MAQUINAS, resumirFabrica } from '@/lib/limites';
+import { lerPerfil, lerUsuario } from '@/lib/token';
 import AlertasRecentes from './AlertasRecentes';
 import DetalheDaMaquina from './DetalheDaMaquina';
 import Cabecalho from './Cabecalho';
+import GerenciarUsuarios from './GerenciarUsuarios';
 import LimitesDeAlerta from './LimitesDeAlerta';
 import LinhaMaquina from './LinhaMaquina';
 import ResumoFabrica from './ResumoFabrica';
@@ -26,6 +28,11 @@ export default function Painel({ token, tema, onAlternarTema, onSair, onSessaoIn
   const [metrica, setMetrica] = useState(METRICA_PADRAO);
   const [maquinaAberta, setMaquinaAberta] = useState(null);
   const [limitesAbertos, setLimitesAbertos] = useState(false);
+  const [usuariosAbertos, setUsuariosAbertos] = useState(false);
+  // O perfil do token só decide o que mostrar; quem barra a ação de verdade é a API.
+  const perfil = lerPerfil(token);
+  const usuario = lerUsuario(token);
+  const podeOperar = perfil === 'ADMIN' || perfil === 'OPERADOR';
   const [filtros, setFiltros] = useState({});
   const [quantosAlertas, setQuantosAlertas] = useState(ALERTAS_POR_PAGINA);
   const { historico, leituras, statusAtual, conexao, erroHistorico } = useTelemetria(token, onSessaoInvalida, pontos);
@@ -50,7 +57,15 @@ export default function Painel({ token, tema, onAlternarTema, onSair, onSessaoIn
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-5 sm:px-6 sm:py-8">
-      <Cabecalho conexao={conexao} tema={tema} onAlternarTema={onAlternarTema} onSair={onSair} />
+      <Cabecalho
+        conexao={conexao}
+        tema={tema}
+        onAlternarTema={onAlternarTema}
+        onSair={onSair}
+        usuario={usuario}
+        perfil={perfil}
+        onUsuarios={perfil === 'ADMIN' ? () => setUsuariosAbertos(true) : undefined}
+      />
 
       <main>
         <ResumoFabrica
@@ -99,9 +114,9 @@ export default function Painel({ token, tema, onAlternarTema, onSair, onSessaoIn
           pendentes={pendentes}
           filtros={filtros}
           onFiltros={mudarFiltros}
-          onReconhecer={reconhecer}
+          onReconhecer={podeOperar ? reconhecer : undefined}
           onMais={alertas.length >= quantosAlertas && quantosAlertas < ALERTAS_MAXIMO ? () => setQuantosAlertas((n) => Math.min(n + ALERTAS_POR_PAGINA * 4, ALERTAS_MAXIMO)) : undefined}
-          onLimites={() => setLimitesAbertos(true)}
+          onLimites={podeOperar ? () => setLimitesAbertos(true) : undefined}
         />
       </main>
 
@@ -111,6 +126,15 @@ export default function Painel({ token, tema, onAlternarTema, onSair, onSessaoIn
           maquina={maquinaAberta}
           limites={limitesDe(maquinaAberta)}
           aoFechar={() => setMaquinaAberta(null)}
+          onSessaoInvalida={onSessaoInvalida}
+        />
+      )}
+
+      {usuariosAbertos && (
+        <GerenciarUsuarios
+          token={token}
+          usuarioAtual={usuario}
+          aoFechar={() => setUsuariosAbertos(false)}
           onSessaoInvalida={onSessaoInvalida}
         />
       )}
