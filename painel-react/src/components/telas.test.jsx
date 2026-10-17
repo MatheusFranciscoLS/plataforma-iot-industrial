@@ -7,6 +7,8 @@ import { ACESSO_DEMO } from '@/lib/demo';
 import LinhaMaquina from './LinhaMaquina';
 import ResumoFabrica from './ResumoFabrica';
 import ControlesDoGrafico from './ControlesDoGrafico';
+import AlertasRecentes from './AlertasRecentes';
+import { METRICAS } from '@/lib/metricas';
 import { avaliarMaquina, resumirFabrica } from '@/lib/limites';
 
 const AGORA = 1_000_000;
@@ -91,7 +93,7 @@ describe('ResumoFabrica', () => {
 describe('ControlesDoGrafico', () => {
   it('cada máquina é um botão que mostra ou esconde a linha, e diz se está ligada', async () => {
     const onAlternar = vi.fn();
-    render(<ControlesDoGrafico ocultas={new Set(['MAQ-02'])} onAlternar={onAlternar} pontos={20} onPontos={vi.fn()} />);
+    render(<ControlesDoGrafico ocultas={new Set(['MAQ-02'])} onAlternar={onAlternar} pontos={20} onPontos={vi.fn()} metrica={METRICAS[0]} onMetrica={vi.fn()} />);
 
     expect(screen.getByRole('button', { name: 'MAQ-01' })).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByRole('button', { name: 'MAQ-02' })).toHaveAttribute('aria-pressed', 'false');
@@ -102,7 +104,7 @@ describe('ControlesDoGrafico', () => {
 
   it('mostra as opções de pontos, marca a atual e avisa quando outra é escolhida', async () => {
     const onPontos = vi.fn();
-    render(<ControlesDoGrafico ocultas={new Set()} onAlternar={vi.fn()} pontos={20} onPontos={onPontos} />);
+    render(<ControlesDoGrafico ocultas={new Set()} onAlternar={vi.fn()} pontos={20} onPontos={onPontos} metrica={METRICAS[0]} onMetrica={vi.fn()} />);
 
     expect(screen.getByRole('button', { name: '20' })).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByRole('button', { name: '60' })).toHaveAttribute('aria-pressed', 'false');
@@ -111,10 +113,52 @@ describe('ControlesDoGrafico', () => {
     expect(onPontos).toHaveBeenCalledWith(160);
   });
 
-  it('a legenda sempre lembra o limite de alerta', () => {
-    render(<ControlesDoGrafico ocultas={new Set()} onAlternar={vi.fn()} pontos={20} onPontos={vi.fn()} />);
-
+  it('a legenda lembra o limite da grandeza escolhida, e rotação não tem limite', () => {
+    const controles = (metrica) => (
+      <ControlesDoGrafico ocultas={new Set()} onAlternar={vi.fn()} pontos={20} onPontos={vi.fn()} metrica={metrica} onMetrica={vi.fn()} />
+    );
+    const { rerender } = render(controles(METRICAS[0]));
     expect(screen.getByText('Limite de 95 °C')).toBeInTheDocument();
+
+    rerender(controles(METRICAS[1]));
+    expect(screen.getByText('Limite de 5,0 mm/s')).toBeInTheDocument();
+
+    rerender(controles(METRICAS[2]));
+    expect(screen.queryByText(/Limite de/)).not.toBeInTheDocument();
+  });
+
+  it('escolher outra grandeza avisa o app', async () => {
+    const onMetrica = vi.fn();
+    render(<ControlesDoGrafico ocultas={new Set()} onAlternar={vi.fn()} pontos={20} onPontos={vi.fn()} metrica={METRICAS[0]} onMetrica={onMetrica} />);
+
+    expect(screen.getByRole('button', { name: 'Temperatura' })).toHaveAttribute('aria-pressed', 'true');
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Vibração' }));
+
+    expect(onMetrica).toHaveBeenCalledWith(METRICAS[1]);
+  });
+});
+
+describe('AlertasRecentes', () => {
+  it('lista as leituras que passaram dos limites, da mais nova para a mais antiga, com o motivo', () => {
+    const leituras = [
+      leitura({ id: 1, timestamp: 100, temperaturaMotor: 99 }),
+      leitura({ id: 2, timestamp: 110, idMaquina: 'MAQ-02', vibracao: 5.6 }),
+      leitura({ id: 3, timestamp: 120 }), // normal: não entra
+    ];
+    render(<AlertasRecentes leituras={leituras} />);
+
+    const itens = screen.getAllByRole('listitem');
+    expect(itens).toHaveLength(2);
+    expect(itens[0]).toHaveTextContent('MAQ-02');
+    expect(itens[0]).toHaveTextContent('Vibração acima de 5,0 mm/s');
+    expect(itens[1]).toHaveTextContent('Temperatura acima de 95 °C');
+  });
+
+  it('sem alertas, diz isso em vez de mostrar uma lista vazia', () => {
+    render(<AlertasRecentes leituras={[leitura()]} />);
+
+    expect(screen.queryByRole('list')).not.toBeInTheDocument();
+    expect(screen.getByText(/Nenhuma leitura passou dos limites/)).toBeInTheDocument();
   });
 });
 

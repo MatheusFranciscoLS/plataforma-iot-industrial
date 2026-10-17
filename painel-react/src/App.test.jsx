@@ -76,6 +76,7 @@ describe('App', () => {
     expect(screen.getByRole('status', { name: 'Resumo da fábrica' })).toHaveTextContent('1 máquina em estado crítico');
     expect(screen.getByRole('article', { name: 'MAQ-01: Crítica' })).toBeInTheDocument();
     expect(screen.getByRole('article', { name: 'MAQ-02: Normal' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Alertas recentes' })).toHaveTextContent('Temperatura acima de 95 °C');
   });
 
   it('pedir mais pontos no gráfico busca um histórico maior e não reconecta o tempo real', async () => {

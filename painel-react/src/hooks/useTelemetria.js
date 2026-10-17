@@ -7,6 +7,7 @@ import { MAQUINAS } from '../lib/limites';
 /**
  * Carrega o histórico e acompanha as leituras novas em tempo real.
  * `pontos` é quantos pontos o gráfico mostra; pedir mais busca um histórico maior.
+ * `historico` são os pontos de temperatura (para os mini gráficos); `leituras` são as leituras soltas, para alertas e CSV.
  * `conexao`: 'conectando' | 'ao-vivo' | 'reconectando'.
  * `onSessaoInvalida` é chamada quando o servidor recusa o token.
  */
@@ -66,5 +67,5 @@ export function useTelemetria(token, onSessaoInvalida, pontos = MAX_PONTOS) {
 
   const historico = useMemo(() => agruparHistorico(leituras, pontos), [leituras, pontos]);
 
-  return { historico, statusAtual, conexao, erroHistorico };
+  return { historico, leituras, statusAtual, conexao, erroHistorico };
 }

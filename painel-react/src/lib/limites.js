@@ -20,6 +20,12 @@ export function avaliarMaquina(dado, agora) {
     return { estado: 'sem-sinal', motivos: [] };
   }
 
+  const motivos = motivosDaLeitura(dado);
+  return { estado: motivos.length > 0 ? 'critica' : 'normal', motivos };
+}
+
+/** Que limites uma leitura ultrapassou (lista vazia se está tudo dentro). */
+export function motivosDaLeitura(dado) {
   const motivos = [];
   if (dado.temperaturaMotor > LIMITE_TEMPERATURA) {
     motivos.push(`Temperatura acima de ${LIMITE_TEMPERATURA} °C`);
@@ -27,8 +33,16 @@ export function avaliarMaquina(dado, agora) {
   if (dado.vibracao > LIMITE_VIBRACAO) {
     motivos.push(`Vibração acima de ${formatarNumero(LIMITE_VIBRACAO, 1, 1)} mm/s`);
   }
+  return motivos;
+}
 
-  return { estado: motivos.length > 0 ? 'critica' : 'normal', motivos };
+/** As leituras mais recentes que passaram de algum limite, da mais nova para a mais antiga. */
+export function alertasRecentes(leituras, maximo = 8) {
+  return [...leituras]
+    .sort((a, b) => b.timestamp - a.timestamp)
+    .map((leitura) => ({ leitura, motivos: motivosDaLeitura(leitura) }))
+    .filter((alerta) => alerta.motivos.length > 0)
+    .slice(0, maximo);
 }
 
 /** Frase única que resume a fábrica inteira. */

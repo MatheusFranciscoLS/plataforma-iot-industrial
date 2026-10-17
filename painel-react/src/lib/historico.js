@@ -9,15 +9,18 @@ export const JANELA_AGRUPAMENTO_S = 2;
 // Quantas leituras individuais o painel guarda na memória (cabe a maior opção de pontos, 160, com 3 máquinas).
 export const MAX_LEITURAS = 700;
 
-/** Acrescenta uma leitura ao fim da lista de pontos { timestamp, 'MAQ-01': temp, ... } sem alterar o array recebido. */
-export function adicionarLeitura(pontos, dado, maxPontos = MAX_PONTOS) {
+/**
+ * Acrescenta uma leitura ao fim da lista de pontos { timestamp, 'MAQ-01': valor, ... } sem alterar o array recebido.
+ * `campo` é o que se desenha: temperaturaMotor (padrão), vibracao ou rpm.
+ */
+export function adicionarLeitura(pontos, dado, maxPontos = MAX_PONTOS, campo = 'temperaturaMotor') {
   const ultimo = pontos[pontos.length - 1];
 
   let novo;
   if (ultimo && Math.abs(ultimo.timestamp - dado.timestamp) < JANELA_AGRUPAMENTO_S) {
-    novo = [...pontos.slice(0, -1), { ...ultimo, [dado.idMaquina]: dado.temperaturaMotor }];
+    novo = [...pontos.slice(0, -1), { ...ultimo, [dado.idMaquina]: dado[campo] }];
   } else {
-    novo = [...pontos, { timestamp: dado.timestamp, [dado.idMaquina]: dado.temperaturaMotor }];
+    novo = [...pontos, { timestamp: dado.timestamp, [dado.idMaquina]: dado[campo] }];
   }
 
   return novo.length > maxPontos ? novo.slice(-maxPontos) : novo;
@@ -44,10 +47,10 @@ export function mesclarLeituras(...listas) {
 }
 
 /** Transforma as leituras (em qualquer ordem) nos pontos do gráfico, com as mesmas regras do ao vivo. */
-export function agruparHistorico(leituras, maxPontos = MAX_PONTOS) {
+export function agruparHistorico(leituras, maxPontos = MAX_PONTOS, campo = 'temperaturaMotor') {
   return [...leituras]
     .sort((a, b) => a.timestamp - b.timestamp)
-    .reduce((pontos, leitura) => adicionarLeitura(pontos, leitura, maxPontos), []);
+    .reduce((pontos, leitura) => adicionarLeitura(pontos, leitura, maxPontos, campo), []);
 }
 
 /** Última leitura de cada máquina, no formato do painel (com `recebidoEm` em ms, vindo do relógio da leitura). */
