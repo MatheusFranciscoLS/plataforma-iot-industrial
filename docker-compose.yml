@@ -37,6 +37,7 @@ services:
       - DB_USER=admin_iot
       - DB_PASS=senha_nova_123
       - RABBITMQ_URL=amqp://rabbitmq:5672
+      - JWT_SECRET=${JWT_SECRET:-MinhaChaveSuperSecretaParaAIndustriaIot2026!}
     depends_on:
       postgres-db:
         condition: service_healthy
@@ -50,7 +51,7 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - JWT_SECRET=MinhaChaveSuperSecretaParaAIndustriaIot2026!
+      - JWT_SECRET=${JWT_SECRET:-MinhaChaveSuperSecretaParaAIndustriaIot2026!}
       - RABBITMQ_URL=amqp://rabbitmq:5672
     depends_on:
       rabbitmq:
