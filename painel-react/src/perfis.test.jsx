@@ -271,4 +271,37 @@ describe('GerenciarUsuarios', () => {
 
     await waitFor(() => expect(onSessaoInvalida).toHaveBeenCalled());
   });
+
+  it('usuários protegidos (site de demonstração) aparecem travados: sem trocar perfil, senha nem apagar', async () => {
+    usuariosDoServidor = [
+      { nome: 'admin', perfil: 'ADMIN', protegido: true },
+      { nome: 'demo', perfil: 'OPERADOR', protegido: true },
+      { nome: 'visitante', perfil: 'LEITURA', protegido: false },
+    ];
+    abrir({ usuarioAtual: 'outro' });
+    await screen.findByRole('list');
+
+    expect(screen.getAllByText('(protegido)')).toHaveLength(2);
+    expect(screen.getByRole('combobox', { name: 'Perfil de demo' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Trocar a senha de demo' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Apagar demo' })).toBeDisabled();
+    expect(screen.getByRole('combobox', { name: 'Perfil de visitante' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Apagar visitante' })).toBeEnabled();
+  });
+
+  it('423 do servidor vira o aviso do site de demonstração', async () => {
+    fetchFalso.mockImplementation(async (url, opcoes = {}) =>
+      (opcoes.method ?? 'GET') === 'GET' ? resposta(200, usuariosDoServidor) : resposta(423),
+    );
+    abrir();
+    await screen.findByRole('list');
+    const usuario = userEvent.setup();
+
+    await usuario.type(screen.getByLabelText('Nome'), 'novo-admin');
+    await usuario.type(screen.getByLabelText('Senha'), 'senha-boa-123');
+    await usuario.selectOptions(screen.getByLabelText('Perfil'), 'ADMIN');
+    await usuario.click(screen.getByRole('button', { name: 'Criar usuário' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Não permitido no site de demonstração');
+  });
 });

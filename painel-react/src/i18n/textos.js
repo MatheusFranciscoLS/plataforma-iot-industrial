@@ -133,6 +133,8 @@ export const TEXTOS = {
     'usuarios.erroConflito': 'Não foi possível: o sistema precisa de pelo menos um administrador.',
     'usuarios.erroInvalido': 'Confira os dados: nome de 3 a 50 caracteres e senha de 8 a 72.',
     'usuarios.erroPermissao': 'Só administradores podem fazer isso.',
+    'usuarios.erroProtegido': 'Não permitido no site de demonstração: usuários iniciais são protegidos, não se criam administradores e há um limite de usuários.',
+    'usuarios.protegido': '(protegido)',
     'usuarios.erro': 'Não foi possível concluir. Tente de novo.',
 
     'detalhe.descricao': 'Números das últimas leituras desta máquina, buscados na API.',
@@ -314,6 +316,8 @@ export const TEXTOS = {
     'usuarios.erroConflito': 'Not possible: the system needs at least one administrator.',
     'usuarios.erroInvalido': 'Check the data: name of 3 to 50 characters and password of 8 to 72.',
     'usuarios.erroPermissao': 'Only administrators can do this.',
+    'usuarios.erroProtegido': 'Not allowed on the demo site: the initial users are protected, administrators cannot be created and there is a user limit.',
+    'usuarios.protegido': '(protected)',
     'usuarios.erro': 'Could not finish. Please try again.',
 
     'detalhe.descricao': 'Numbers from this machine’s latest readings, fetched from the API.',

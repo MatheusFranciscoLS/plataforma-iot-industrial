@@ -53,6 +53,7 @@ export default function GerenciarUsuarios({ token, usuarioAtual, aoFechar, onSes
     (falha, aoCriar = false) => {
       if (falha instanceof SemPermissaoError) return t('usuarios.erroPermissao');
       if (falha.status === 409) return t(aoCriar ? 'usuarios.erroNomeExiste' : 'usuarios.erroConflito');
+      if (falha.status === 423) return t('usuarios.erroProtegido');
       if (falha.status === 400) return t('usuarios.erroInvalido');
       return t('usuarios.erro');
     },
@@ -117,20 +118,21 @@ export default function GerenciarUsuarios({ token, usuarioAtual, aoFechar, onSes
 
         {usuarios && (
           <ul className="divide-y divide-linha rounded border border-linha">
-            {usuarios.map(({ nome, perfil }) => {
+            {usuarios.map(({ nome, perfil, protegido }) => {
               const eVoce = nome === usuarioAtual;
               return (
                 <li key={nome} className="flex flex-wrap items-center gap-x-4 gap-y-2 px-3 py-3">
                   <span className="numero min-w-28 text-lg">
                     {nome}
                     {eVoce && <span className="ml-2 font-sans text-sm text-suave">{t('usuarios.voce')}</span>}
+                    {protegido && <span className="ml-2 font-sans text-sm text-suave">{t('usuarios.protegido')}</span>}
                   </span>
 
                   <select
                     aria-label={t('usuarios.perfilDe', { nome })}
                     className={classeDoSelect}
                     value={perfil}
-                    disabled={ocupado || eVoce}
+                    disabled={ocupado || eVoce || protegido}
                     onChange={(e) => executar(() => trocarPerfilDoUsuario(token, nome, e.target.value), t('usuarios.perfilTrocado', { nome }))}
                   >
                     {PERFIS.map((p) => (
@@ -145,7 +147,7 @@ export default function GerenciarUsuarios({ token, usuarioAtual, aoFechar, onSes
                       type="button"
                       variant="outline"
                       size="sm"
-                      disabled={ocupado}
+                      disabled={ocupado || protegido}
                       aria-label={t('usuarios.trocarSenhaDe', { nome })}
                       onClick={() => {
                         setTrocandoSenha(trocandoSenha === nome ? null : nome);
@@ -159,7 +161,7 @@ export default function GerenciarUsuarios({ token, usuarioAtual, aoFechar, onSes
                       type="button"
                       variant="outline"
                       size="sm"
-                      disabled={ocupado || eVoce}
+                      disabled={ocupado || eVoce || protegido}
                       aria-label={t('usuarios.apagarDe', { nome })}
                       onClick={() => {
                         setConfirmandoApagar(confirmandoApagar === nome ? null : nome);

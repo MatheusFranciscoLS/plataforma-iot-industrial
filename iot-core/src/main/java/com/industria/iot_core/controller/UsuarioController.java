@@ -1,5 +1,6 @@
 package com.industria.iot_core.controller;
 
+import com.industria.iot_core.config.ProtecaoDoDemo;
 import com.industria.iot_core.model.Usuario;
 import com.industria.iot_core.model.Usuario.Perfil;
 import com.industria.iot_core.repository.UsuarioRepository;
@@ -32,9 +33,9 @@ import java.util.List;
 @RequestMapping("/api/usuarios")
 public class UsuarioController {
 
-    public record UsuarioResumo(String nome, Perfil perfil) {
-        static UsuarioResumo de(Usuario u) {
-            return new UsuarioResumo(u.getNome(), u.getPerfil());
+    public record UsuarioResumo(String nome, Perfil perfil, boolean protegido) {
+        static UsuarioResumo de(Usuario u, ProtecaoDoDemo protecao) {
+            return new UsuarioResumo(u.getNome(), u.getPerfil(), protecao.protegido(u.getNome()));
         }
     }
 
@@ -57,27 +58,32 @@ public class UsuarioController {
 
     private final UsuarioRepository usuarios;
     private final PasswordEncoder encoder;
+    private final ProtecaoDoDemo protecao;
 
-    public UsuarioController(UsuarioRepository usuarios, PasswordEncoder encoder) {
+    public UsuarioController(UsuarioRepository usuarios, PasswordEncoder encoder, ProtecaoDoDemo protecao) {
         this.usuarios = usuarios;
         this.encoder = encoder;
+        this.protecao = protecao;
     }
 
     @Operation(summary = "Lista os usuários", description = "Nunca devolve senha nem hash.")
     @GetMapping
     public List<UsuarioResumo> listar() {
-        return usuarios.findAllByOrderByNomeAsc().stream().map(UsuarioResumo::de).toList();
+        return usuarios.findAllByOrderByNomeAsc().stream().map(u -> UsuarioResumo.de(u, protecao)).toList();
     }
 
-    @Operation(summary = "Cria um usuário", description = "409 se o nome já existe. Senha de 8 a 72 caracteres.")
+    @Operation(summary = "Cria um usuário",
+            description = "409 se o nome já existe. Senha de 8 a 72 caracteres. Com PROTEGER_USUARIOS=true (site de demonstração), "
+                    + "não cria administradores e há um teto de usuários (423).")
     @PostMapping
     @Transactional
     public ResponseEntity<UsuarioResumo> criar(@Valid @RequestBody NovoUsuario pedido) {
         if (usuarios.findByNome(pedido.nome()).isPresent()) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Já existe um usuário com esse nome");
         }
+        protecao.exigirCriacaoPermitida(pedido.perfil(), usuarios.count());
         Usuario criado = usuarios.save(new Usuario(pedido.nome(), encoder.encode(pedido.senha()), pedido.perfil()));
-        return ResponseEntity.status(HttpStatus.CREATED).body(UsuarioResumo.de(criado));
+        return ResponseEntity.status(HttpStatus.CREATED).body(UsuarioResumo.de(criado, protecao));
     }
 
     /** Troca a senha de qualquer usuário (inclusive a do próprio administrador). */
@@ -86,6 +92,7 @@ public class UsuarioController {
     @Transactional
     public ResponseEntity<Void> trocarSenha(@PathVariable String nome, @Valid @RequestBody NovaSenha pedido) {
         Usuario usuario = buscar(nome);
+        protecao.exigirQueNaoSejaProtegido(nome);
         usuario.setSenhaHash(encoder.encode(pedido.senha()));
         usuarios.save(usuario);
         return ResponseEntity.noContent().build();
@@ -97,11 +104,13 @@ public class UsuarioController {
     @Transactional
     public UsuarioResumo trocarPerfil(@PathVariable String nome, @Valid @RequestBody NovoPerfil pedido) {
         Usuario usuario = buscar(nome);
+        protecao.exigirQueNaoSejaProtegido(nome);
+        protecao.exigirPerfilPermitido(pedido.perfil());
         if (usuario.getPerfil() == Perfil.ADMIN && pedido.perfil() != Perfil.ADMIN) {
             exigirOutroAdministrador();
         }
         usuario.setPerfil(pedido.perfil());
-        return UsuarioResumo.de(usuarios.save(usuario));
+        return UsuarioResumo.de(usuarios.save(usuario), protecao);
     }
 
     /** Apaga o usuário. Ninguém apaga a si mesmo, e o último administrador fica. */
@@ -110,6 +119,7 @@ public class UsuarioController {
     @Transactional
     public ResponseEntity<Void> apagar(@PathVariable String nome, Authentication autenticacao) {
         Usuario usuario = buscar(nome);
+        protecao.exigirQueNaoSejaProtegido(nome);
         if (usuario.getNome().equals(autenticacao.getName())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Você não pode apagar o seu próprio usuário");
         }
