@@ -124,6 +124,18 @@ describe('historico', () => {
     expect(r['MAQ-02'].recebidoEm).toBe(15_000);
   });
 
+  it('o limite de pontos pode ser maior que 20', () => {
+    const registros = [];
+    for (let t = 1; t <= 70; t++) registros.push({ idMaquina: 'MAQ-01', timestamp: t * 5, temperaturaMotor: 70 });
+
+    expect(agruparHistorico(registros)).toHaveLength(MAX_PONTOS);
+    expect(agruparHistorico(registros, 60)).toHaveLength(60);
+
+    let h = [];
+    for (const r of registros) h = adicionarLeitura(h, r, 60);
+    expect(h).toHaveLength(60);
+  });
+
   it('leitura com menos de 2 s de diferença entra no último ponto', () => {
     const base = [{ timestamp: 100, 'MAQ-01': 80 }];
     const novo = adicionarLeitura(base, { idMaquina: 'MAQ-02', timestamp: 101, temperaturaMotor: 70 });
