@@ -2,6 +2,8 @@ package com.industria.iot_core.controller;
 
 import com.industria.iot_core.model.Alerta;
 import com.industria.iot_core.repository.AlertaRepository;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.persistence.criteria.Predicate;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -22,6 +24,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+@Tag(name = "Alertas", description = "Avisos de máquina acima do limite, guardados no servidor")
 @RestController
 @RequestMapping("/api/alertas")
 public class AlertaController {
@@ -39,6 +42,7 @@ public class AlertaController {
      * Alertas mais recentes primeiro. `limite` escolhe quantos (de 1 a 200; padrão 20).
      * Filtros opcionais: `maquina`, `tipo` (TEMPERATURA ou VIBRACAO) e `reconhecido` (true ou false).
      */
+    @Operation(summary = "Lista os alertas, do mais novo para o mais antigo", description = "Qualquer perfil. limite vai de 1 a 200 (padrão 20).")
     @GetMapping
     public ResponseEntity<List<Alerta>> listar(@RequestParam(required = false) Integer limite,
                                                @RequestParam(required = false) String maquina,
@@ -61,12 +65,14 @@ public class AlertaController {
     }
 
     /** Quantos alertas ainda não foram reconhecidos por ninguém. */
+    @Operation(summary = "Conta os alertas que ninguém reconheceu")
     @GetMapping("/pendentes")
     public Map<String, Long> pendentes() {
         return Map.of("quantidade", repository.countByReconhecidoPorIsNull());
     }
 
     /** Marca o alerta como visto pelo usuário logado. Reconhecer de novo não muda quem reconheceu primeiro. */
+    @Operation(summary = "Reconhece um alerta", description = "ADMIN ou OPERADOR. Guarda quem reconheceu primeiro; reconhecer de novo não muda nada.")
     @PostMapping("/{id}/reconhecer")
     @Transactional
     public Alerta reconhecer(@PathVariable Long id, Authentication autenticacao) {

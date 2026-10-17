@@ -4,6 +4,9 @@ import com.industria.iot_core.dto.LeituraRequest;
 import com.industria.iot_core.model.RegistroSensor;
 import com.industria.iot_core.repository.RegistroSensorRepository;
 import com.industria.iot_core.service.RegistroSensorService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirements;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
@@ -21,6 +24,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.List;
 
+@Tag(name = "Sensores", description = "Entrada das leituras e histórico")
 @RestController
 @RequestMapping("/api/sensores")
 public class RegistroSensorController {
@@ -43,6 +47,9 @@ public class RegistroSensorController {
         this.chaveSensores = chaveSensores;
     }
 
+    @Operation(summary = "Recebe uma leitura de sensor",
+            description = "Sem token (os sensores não fazem login). Se a API tem SENSOR_API_KEY, exige o cabeçalho X-API-Key.")
+    @SecurityRequirements // rota pública: sem o cadeado na documentação
     @PostMapping
     public ResponseEntity<RegistroSensor> receberDados(
             @RequestHeader(value = "X-API-Key", required = false) String chave,
@@ -58,6 +65,7 @@ public class RegistroSensorController {
      * Histórico, do mais novo para o mais antigo. Sem parâmetros, devolve os 60 mais recentes de todas as máquinas
      * (como o painel sempre usou). `maquina` filtra uma máquina e `limite` escolhe o tamanho (de 1 a 500).
      */
+    @Operation(summary = "Histórico de leituras, do mais novo para o mais antigo")
     @GetMapping
     public ResponseEntity<List<RegistroSensor>> listarHistorico(
             @RequestParam(required = false) String maquina,

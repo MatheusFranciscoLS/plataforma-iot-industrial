@@ -5,6 +5,7 @@ import com.industria.iot_core.config.RabbitConfig;
 import com.industria.iot_core.dto.LeituraRequest;
 import com.industria.iot_core.model.RegistroSensor;
 import com.industria.iot_core.repository.RegistroSensorRepository;
+import io.micrometer.core.instrument.MeterRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
@@ -20,13 +21,15 @@ public class RegistroSensorService {
     private final RabbitTemplate rabbitTemplate;
     private final ObjectMapper objectMapper;
     private final AlertaService alertas;
+    private final MeterRegistry metricas;
 
     public RegistroSensorService(RegistroSensorRepository repository, RabbitTemplate rabbitTemplate,
-                                 ObjectMapper objectMapper, AlertaService alertas) {
+                                 ObjectMapper objectMapper, AlertaService alertas, MeterRegistry metricas) {
         this.repository = repository;
         this.rabbitTemplate = rabbitTemplate;
         this.objectMapper = objectMapper;
         this.alertas = alertas;
+        this.metricas = metricas;
     }
 
     public RegistroSensor registrar(LeituraRequest leitura) {
@@ -40,6 +43,7 @@ public class RegistroSensorService {
 
         RegistroSensor salvo = repository.save(novo);
         log.info("Leitura salva: {} | {} °C", salvo.getIdMaquina(), salvo.getTemperaturaMotor());
+        metricas.counter("iot.leituras.recebidas", "maquina", salvo.getIdMaquina()).increment();
 
         // Um problema ao registrar o alerta não pode impedir a leitura de seguir adiante.
         try {
@@ -53,6 +57,7 @@ public class RegistroSensorService {
             rabbitTemplate.convertAndSend(RabbitConfig.FILA_SENSORES, objectMapper.writeValueAsString(salvo));
         } catch (Exception e) {
             log.warn("Não foi possível enviar a leitura {} para o RabbitMQ: {}", salvo.getId(), e.getMessage());
+            metricas.counter("iot.rabbitmq.falhas").increment();
         }
 
         return salvo;
