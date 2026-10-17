@@ -57,6 +57,8 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.POST, "/api/alertas/*/reconhecer").hasAnyRole("ADMIN", "OPERADOR")
                 .requestMatchers(HttpMethod.PUT, "/api/limites/**").hasAnyRole("ADMIN", "OPERADOR")
                 .requestMatchers(HttpMethod.DELETE, "/api/limites/**").hasAnyRole("ADMIN", "OPERADOR")
+                // Provocar falha no demo: ADMIN e OPERADOR (a rota só existe com o modo demonstração ligado)
+                .requestMatchers(HttpMethod.POST, "/api/demo/**").hasAnyRole("ADMIN", "OPERADOR")
                 .anyRequest().authenticated()
             )
             // Sem token (ou com token inválido): 401. Com token válido mas sem permissão: 403.

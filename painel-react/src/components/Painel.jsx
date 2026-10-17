@@ -1,6 +1,8 @@
-import { lazy, Suspense, useMemo, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAgora } from '@/hooks/useAgora';
+import { useDemo } from '@/hooks/useDemo';
+import { provocarFalha, SemPermissaoError, SessaoInvalidaError } from '@/lib/api';
 import { useIdioma } from '@/i18n/idioma-contexto';
 import { useAlertas } from '@/hooks/useAlertas';
 import { useLimites } from '@/hooks/useLimites';
@@ -67,6 +69,27 @@ export default function Painel({ token, tema, onAlternarTema, onSair, onSessaoIn
     setQuantosAlertas(ALERTAS_POR_PAGINA);
   };
 
+  // Modo demonstração: operador e administrador podem provocar uma falha numa máquina para ver o alerta na hora.
+  const demo = useDemo(token, onSessaoInvalida);
+  const [avisoDaFalha, setAvisoDaFalha] = useState(null); // { texto, erro }
+  useEffect(() => {
+    if (!avisoDaFalha) return undefined;
+    const id = setTimeout(() => setAvisoDaFalha(null), 10000);
+    return () => clearTimeout(id);
+  }, [avisoDaFalha]);
+
+  async function simularFalha(nome) {
+    try {
+      const resultado = await provocarFalha(token, nome);
+      setAvisoDaFalha({ texto: t('demo.falhaIniciada', { nome, seg: resultado.duracaoSegundos }), erro: false });
+    } catch (falha) {
+      if (falha instanceof SessaoInvalidaError) onSessaoInvalida();
+      else if (falha instanceof SemPermissaoError) setAvisoDaFalha({ texto: t('demo.falhaSemPermissao'), erro: true });
+      else if (falha.status === 429) setAvisoDaFalha({ texto: t('demo.falhaAguarde', { nome, seg: falha.esperarSegundos ?? demo.esperaSegundos }), erro: true });
+      else setAvisoDaFalha({ texto: t('demo.falhaErro'), erro: true });
+    }
+  }
+
   return (
     <div className="mx-auto max-w-6xl px-4 py-5 sm:px-6 sm:py-8">
       <Cabecalho
@@ -87,6 +110,17 @@ export default function Painel({ token, tema, onAlternarTema, onSair, onSessaoIn
           total={MAQUINAS.length}
         />
 
+        <div aria-live="polite">
+          {avisoDaFalha && (
+            <p
+              role={avisoDaFalha.erro ? 'alert' : 'status'}
+              className={`mt-6 rounded border px-4 py-3 text-sm ${avisoDaFalha.erro ? 'border-alarme font-medium text-alarme' : 'border-linha bg-painel'}`}
+            >
+              {avisoDaFalha.texto}
+            </p>
+          )}
+        </div>
+
         <div className="mt-6 flex flex-col gap-3">
           {MAQUINAS.map((nome, i) => (
             <LinhaMaquina
@@ -98,6 +132,7 @@ export default function Painel({ token, tema, onAlternarTema, onSair, onSessaoIn
               serie={serieDaMaquina(historico, nome)}
               limites={limitesDe(nome)}
               onDetalhes={setMaquinaAberta}
+              onSimularFalha={demo.ativo && podeOperar ? simularFalha : undefined}
             />
           ))}
         </div>

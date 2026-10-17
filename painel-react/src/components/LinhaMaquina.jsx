@@ -1,4 +1,4 @@
-import { AlertTriangle, CircleDot, Clock, Unplug } from 'lucide-react';
+import { AlertTriangle, CircleDot, Clock, Unplug, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useIdioma } from '@/i18n/idioma-contexto';
 import { cn } from '@/lib/utils';
@@ -32,7 +32,8 @@ function Metrica({ rotulo, children, className }) {
   );
 }
 
-export default function LinhaMaquina({ nome, dado, avaliacao, agora, serie, limites = LIMITES_PADRAO, onDetalhes }) {
+/** `onSimularFalha` (só no modo demonstração, para operador e administrador) mostra o botão "Simular falha". */
+export default function LinhaMaquina({ nome, dado, avaliacao, agora, serie, limites = LIMITES_PADRAO, onDetalhes, onSimularFalha }) {
   const { t, locale } = useIdioma();
   const { estado, motivos } = avaliacao;
   const { chave, Icone } = ESTADOS[estado];
@@ -70,9 +71,17 @@ export default function LinhaMaquina({ nome, dado, avaliacao, agora, serie, limi
           </ul>
         )}
         {dado && <p className="mt-1 text-xs text-suave">{t('maquina.atualizada', { quando: haQuantoTempo(t, dado.recebidoEm, agora) })}</p>}
-        <Button variant="outline" size="sm" className="mt-2" onClick={() => onDetalhes(nome)} aria-label={t('maquina.detalhesAria', { nome })}>
-          {t('maquina.detalhes')}
-        </Button>
+        <div className="mt-2 flex flex-wrap gap-2">
+          <Button variant="outline" size="sm" onClick={() => onDetalhes(nome)} aria-label={t('maquina.detalhesAria', { nome })}>
+            {t('maquina.detalhes')}
+          </Button>
+          {onSimularFalha && (
+            <Button variant="outline" size="sm" onClick={() => onSimularFalha(nome)} aria-label={t('maquina.simularFalhaAria', { nome })}>
+              <Zap aria-hidden="true" />
+              {t('maquina.simularFalha')}
+            </Button>
+          )}
+        </div>
       </div>
 
       {semDados ? (
