@@ -13,6 +13,7 @@ export const TEXTOS = {
     'conexao.aoVivo': 'Ao vivo',
     'conexao.conectando': 'Conectando…',
     'conexao.reconectando': 'Reconectando…',
+    'conexao.simulado': 'Simulação no navegador',
     'conexao.porConsulta': 'Atualizando por consulta',
     'conexao.porConsulta.dica': 'O tempo real não está chegando; o painel busca as leituras novas na API a cada 3 segundos.',
 
@@ -210,6 +211,7 @@ export const TEXTOS = {
     'login.senha': 'Senha',
     'aviso.sessao': 'Sua sessão terminou. Entre de novo para continuar.',
     'aviso.acordando': 'O servidor do demo é gratuito e dorme quando ninguém usa. Ele está acordando, o que pode levar até 1 minuto. Pode esperar nesta tela.',
+    'previa.aviso': 'Você está vendo uma simulação feita no seu navegador. O servidor gratuito do demo estava dormindo e está acordando (até 1 minuto). Assim que ele responder, esta tela troca sozinha pelos dados reais.',
     'erro.rede': 'Não foi possível falar com o servidor. Confira a conexão e tente de novo.',
     'erro.credenciais': 'Usuário ou senha incorretos.',
     'erro.servidor': 'O servidor não conseguiu fazer o login. Tente de novo em instantes.',
@@ -244,6 +246,7 @@ export const TEXTOS = {
     'conexao.aoVivo': 'Live',
     'conexao.conectando': 'Connecting…',
     'conexao.reconectando': 'Reconnecting…',
+    'conexao.simulado': 'Browser simulation',
     'conexao.porConsulta': 'Updating by polling',
     'conexao.porConsulta.dica': 'Live updates are not arriving; the dashboard fetches new readings from the API every 3 seconds.',
 
@@ -441,6 +444,7 @@ export const TEXTOS = {
     'login.senha': 'Password',
     'aviso.sessao': 'Your session has ended. Sign in again to continue.',
     'aviso.acordando': 'The demo server is free and sleeps when nobody uses it. It is waking up, which can take up to 1 minute. You can wait on this screen.',
+    'previa.aviso': 'You are seeing a simulation running in your browser. The free demo server was asleep and is waking up (up to 1 minute). As soon as it answers, this screen switches to the real data by itself.',
     'erro.rede': 'Could not reach the server. Check your connection and try again.',
     'erro.credenciais': 'Wrong username or password.',
     'erro.servidor': 'The server could not sign you in. Try again in a moment.',

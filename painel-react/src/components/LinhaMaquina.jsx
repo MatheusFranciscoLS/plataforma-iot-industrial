@@ -32,7 +32,10 @@ function Metrica({ rotulo, children, className }) {
   );
 }
 
-/** `onSimularFalha` (só no modo demonstração, para operador e administrador) mostra o botão "Simular falha". */
+/**
+ * `onDetalhes` mostra o botão "Ver detalhes"; `onSimularFalha` (só no modo demonstração, para operador e administrador)
+ * mostra o botão "Simular falha".
+ */
 export default function LinhaMaquina({ nome, dado, avaliacao, agora, serie, limites = LIMITES_PADRAO, onDetalhes, onSimularFalha }) {
   const { t, locale } = useIdioma();
   const { estado, motivos } = avaliacao;
@@ -72,9 +75,11 @@ export default function LinhaMaquina({ nome, dado, avaliacao, agora, serie, limi
         )}
         {dado && <p className="mt-1 text-xs text-suave">{t('maquina.atualizada', { quando: haQuantoTempo(t, dado.recebidoEm, agora) })}</p>}
         <div className="mt-2 flex flex-wrap gap-2">
-          <Button variant="outline" size="sm" onClick={() => onDetalhes(nome)} aria-label={t('maquina.detalhesAria', { nome })}>
-            {t('maquina.detalhes')}
-          </Button>
+          {onDetalhes && (
+            <Button variant="outline" size="sm" onClick={() => onDetalhes(nome)} aria-label={t('maquina.detalhesAria', { nome })}>
+              {t('maquina.detalhes')}
+            </Button>
+          )}
           {onSimularFalha && (
             <Button variant="outline" size="sm" onClick={() => onSimularFalha(nome)} aria-label={t('maquina.simularFalhaAria', { nome })}>
               <Zap aria-hidden="true" />
