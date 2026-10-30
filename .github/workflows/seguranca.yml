@@ -33,13 +33,13 @@ jobs:
       - uses: actions/checkout@v7
 
       - name: Preparar o CodeQL
-        uses: github/codeql-action/init@v4.39.0
+        uses: github/codeql-action/init@v4.39.1
         with:
           languages: ${{ matrix.linguagem }}
           build-mode: none
 
       - name: Analisar
-        uses: github/codeql-action/analyze@v4.39.0
+        uses: github/codeql-action/analyze@v4.39.1
         with:
           category: "/language:${{ matrix.linguagem }}"
 
@@ -78,7 +78,7 @@ jobs:
           exit-code: "0"
 
       - name: Enviar o resultado para a aba Security
-        uses: github/codeql-action/upload-sarif@v4.39.0
+        uses: github/codeql-action/upload-sarif@v4.39.1
         with:
           sarif_file: trivy-repositorio.sarif
           category: trivy-repositorio
@@ -117,7 +117,7 @@ jobs:
           exit-code: "0"
 
       - name: Enviar o resultado para a aba Security
-        uses: github/codeql-action/upload-sarif@v4.39.0
+        uses: github/codeql-action/upload-sarif@v4.39.1
         with:
           sarif_file: trivy-imagem.sarif
           category: trivy-imagem
