@@ -16,7 +16,7 @@
 >
 > 📖 **Estudo de caso:** [como a plataforma foi pensada, o que deu errado e o que foi medido](https://matheusfranciscols.github.io/estudo-de-caso-plataforma-iot/) (também em [inglês](https://matheusfranciscols.github.io/estudo-de-caso-plataforma-iot/en/)).
 
-Uma arquitetura de microsserviços ponta a ponta para monitoramento em tempo real de telemetria de máquinas industriais (Temperatura, RPM e Vibração), protegida por autenticação criptográfica JWT e orquestrada inteiramente em containers Docker.
+Plataforma de monitoramento industrial com arquitetura distribuída em quatro serviços, comunicação por mensageria e banco de dados compartilhado. Acompanha em tempo real a telemetria de máquinas (Temperatura, RPM e Vibração), com autenticação JWT, sensores simulados e execução em containers Docker.
 
 ---
 
@@ -271,7 +271,7 @@ cd painel-react && npm ci && npm run lint && npm test
 
 # 📈 Tecnologias e Conceitos Aplicados
 
-- Microsserviços
+- Arquitetura distribuída em serviços
 - Mensageria Assíncrona
 - Arquitetura Event-Driven
 - WebSockets
