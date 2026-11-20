@@ -1,5 +1,5 @@
 # Usa uma versão leve do Node.js
-FROM node:20-alpine
+FROM node:26-alpine
 
 # Cria uma pasta de trabalho dentro do container, que pertence ao usuário comum "node"
 WORKDIR /usr/src/app
