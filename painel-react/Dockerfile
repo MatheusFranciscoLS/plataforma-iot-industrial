@@ -1,6 +1,6 @@
 # Imagem super leve do Node (este Dockerfile serve o painel em modo de desenvolvimento, no docker-compose;
 # o site publicado é gerado com "npm run build" na Vercel)
-FROM node:20-alpine
+FROM node:26-alpine
 
 # A pasta de trabalho pertence ao usuário comum "node": o Vite precisa escrever o cache dentro dela
 WORKDIR /app
